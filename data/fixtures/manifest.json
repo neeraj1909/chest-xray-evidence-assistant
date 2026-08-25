@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "fixtures": [
+    {
+      "path": "images/synthetic-full-frame.png",
+      "description": "Abstract grayscale pattern for full-frame evidence tests.",
+      "intended_use": [
+        "full_frame"
+      ],
+      "asset": {
+        "image_id": "synthetic-full-frame",
+        "sha256": "947f75b530cc73ca3c4aad7be5ccaebe46bb936c0c73706baae589c2f211e358",
+        "media_type": "image/png",
+        "byte_size": 634,
+        "width_px": 64,
+        "height_px": 64,
+        "origin": "Generated locally by scripts/generate_fixtures.py",
+        "license_status": "synthetic",
+        "contains_phi": false
+      }
+    },
+    {
+      "path": "images/synthetic-crop-target.png",
+      "description": "Abstract grayscale pattern with a deterministic crop target.",
+      "intended_use": [
+        "full_frame",
+        "crop"
+      ],
+      "asset": {
+        "image_id": "synthetic-crop-target",
+        "sha256": "014cdad389db2164809bf4decb620f52c1016a889c1614e12849168312ffa1c7",
+        "media_type": "image/png",
+        "byte_size": 267,
+        "width_px": 64,
+        "height_px": 64,
+        "origin": "Generated locally by scripts/generate_fixtures.py",
+        "license_status": "synthetic",
+        "contains_phi": false
+      }
+    },
+    {
+      "path": "images/synthetic-abstention.png",
+      "description": "Blank synthetic image for insufficient-evidence abstention tests.",
+      "intended_use": [
+        "abstention"
+      ],
+      "asset": {
+        "image_id": "synthetic-abstention",
+        "sha256": "fd84b9c44463c39ce93c50affdeae49a153d5b1982bfaeb2b3536d83a2b629e7",
+        "media_type": "image/png",
+        "byte_size": 84,
+        "width_px": 64,
+        "height_px": 64,
+        "origin": "Generated locally by scripts/generate_fixtures.py",
+        "license_status": "synthetic",
+        "contains_phi": false
+      }
+    }
+  ]
+}
