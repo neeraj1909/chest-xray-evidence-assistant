@@ -1,0 +1,19 @@
+{
+  "status": "abstain",
+  "confidence": 1.0,
+  "observations": [],
+  "visual_evidence": [],
+  "source_evidence": [],
+  "uncertainty": [
+    "The blank synthetic fixture does not provide sufficient visual evidence."
+  ],
+  "abstention_reason": "Insufficient visual evidence for a grounded response.",
+  "trace": [
+    {
+      "sequence": 0,
+      "kind": "validation",
+      "status": "rejected",
+      "name": "insufficient_evidence"
+    }
+  ]
+}

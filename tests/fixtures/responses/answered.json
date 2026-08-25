@@ -1,0 +1,31 @@
+{
+  "status": "answered",
+  "answer": "The synthetic fixture contains a single abstract grayscale image.",
+  "confidence": 0.8,
+  "observations": [
+    "One image asset is available for inspection."
+  ],
+  "visual_evidence": [
+    {
+      "locator": {
+        "image_id": "synthetic-full-frame",
+        "kind": "full_frame",
+        "box": null
+      },
+      "description": "The complete synthetic fixture frame.",
+      "confidence": 0.8
+    }
+  ],
+  "source_evidence": [],
+  "uncertainty": [
+    "This is a synthetic non-clinical test pattern."
+  ],
+  "trace": [
+    {
+      "sequence": 0,
+      "kind": "final",
+      "status": "succeeded",
+      "name": "deterministic_fake"
+    }
+  ]
+}

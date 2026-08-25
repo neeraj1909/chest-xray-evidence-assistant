@@ -1,0 +1,19 @@
+{
+  "status": "needs_clarification",
+  "confidence": 0.0,
+  "observations": [],
+  "visual_evidence": [],
+  "source_evidence": [],
+  "uncertainty": [
+    "The question does not identify a bounded observation to make."
+  ],
+  "clarification_question": "What specific non-diagnostic observation should be checked?",
+  "trace": [
+    {
+      "sequence": 0,
+      "kind": "validation",
+      "status": "rejected",
+      "name": "question_scope"
+    }
+  ]
+}

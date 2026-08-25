@@ -1,0 +1,9 @@
+{
+  "status": "answered",
+  "answer": "This payload must be rejected.",
+  "confidence": 1.2,
+  "uncertainty": [
+    "Malformed confidence and unknown fields are test inputs."
+  ],
+  "patient_name": "must-never-be-accepted"
+}
