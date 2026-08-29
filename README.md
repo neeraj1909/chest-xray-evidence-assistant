@@ -69,8 +69,9 @@ The request flow is:
    limits before returning a `VisualResponse`.
 7. Store only redacted trace metadata for evaluation and reproducibility.
 
-The current code implements the contract and fixture layers. The agent, tools,
-retrieval, verifier, UI, and deployment layers will be added incrementally.
+The current code implements the contract, deterministic fixture, provider-
+neutral model-port, and fake-model agent layers. Hosted providers, tools,
+retrieval, verification, UI, and deployment remain opt-in incremental slices.
 
 ## Contracts
 
@@ -95,7 +96,9 @@ Implemented:
 - strict Pydantic contracts;
 - deterministic synthetic image fixtures;
 - fixture manifest and file verification; and
-- deterministic fake response tests.
+- deterministic fake response tests;
+- a provider-neutral model adapter; and
+- a bounded Pydantic AI path exercised with a deterministic fake model.
 
 Planned:
 
@@ -117,7 +120,9 @@ is added.
 ## Development
 
 ```bash
-uv run --group dev pytest -q
+uv run --group dev pytest tests/unit tests/safety
+uv run --group dev --group agent pytest tests/integration
+uv run --group dev --group agent pytest -q
 uv run --group dev ruff format --check .
 uv run --group dev ruff check .
 uv run --group dev python -m compileall -q src tests scripts

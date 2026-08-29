@@ -1,5 +1,6 @@
 """Typed contracts for the Chest X-ray Evidence Assistant."""
 
+from .model_ports import DeterministicModelAdapter, ModelAdapter
 from .models import (
     AgentTraceEvent,
     ContractModel,
@@ -17,10 +18,12 @@ from .models import (
 __all__ = [
     "AgentTraceEvent",
     "ContractModel",
+    "DeterministicModelAdapter",
     "EvidenceRequest",
     "ImageAsset",
     "ImageLocator",
     "NormalizedBoundingBox",
+    "ModelAdapter",
     "QuestionContext",
     "RunLimits",
     "SourceEvidence",

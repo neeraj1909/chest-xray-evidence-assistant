@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import socket
-from pathlib import Path 
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
@@ -10,7 +10,6 @@ from pydantic import ValidationError
 from chest_xray_evidence_assistant.models import (
     ImageAsset,
     ImageLocator,
-    SourceEvidence,
     VisualEvidence,
     VisualResponse,
 )
@@ -27,8 +26,8 @@ def valid_visual_evidence() -> VisualEvidence:
         description="Synthetic radiograph with no patient-identifying content.",
         confidence=0.8,
     )
-    
-    
+
+
 def test_image_asset_rejects_phi_marker() -> None:
     with pytest.raises(ValidationError):
         ImageAsset(
@@ -42,7 +41,7 @@ def test_image_asset_rejects_phi_marker() -> None:
             license_status="synthetic",
             contains_phi=True,
         )
-        
+
 
 @pytest.mark.parametrize("confidence", [-0.01, 1.01])
 def test_response_rejects_out_of_range_confidence(confidence: float) -> None:
@@ -53,8 +52,8 @@ def test_response_rejects_out_of_range_confidence(confidence: float) -> None:
             uncertainty=["The available evidence is insufficient."],
             abstention_reason="Insufficient evidence.",
         )
-        
-        
+
+
 def test_answered_response_requires_evidence_provenance() -> None:
     with pytest.raises(ValidationError):
         VisualResponse(
@@ -63,8 +62,8 @@ def test_answered_response_requires_evidence_provenance() -> None:
             confidence=0.8,
             uncertainty=["Limited to the supplied image."],
         )
-        
-        
+
+
 def test_visual_evidence_requires_a_valid_locator() -> None:
     with pytest.raises(ValidationError):
         VisualResponse(
@@ -83,8 +82,8 @@ def test_visual_evidence_requires_a_valid_locator() -> None:
                 }
             ],
         )
-        
-        
+
+
 def test_source_evidence_requires_document_provenance() -> None:
     with pytest.raises(ValidationError):
         VisualResponse(
@@ -103,7 +102,7 @@ def test_source_evidence_requires_document_provenance() -> None:
                 }
             ],
         )
-        
+
 
 @pytest.mark.parametrize(
     ("status", "extra_fields"),
@@ -135,8 +134,8 @@ def test_non_answer_statuses_cannot_contain_answers(
             uncertainty=["The fixture is intentionally incomplete."],
             **extra_fields,
         )
-        
-        
+
+
 @pytest.mark.parametrize(
     ("filename", "expected_status"),
     [
@@ -151,17 +150,17 @@ def test_approved_fake_responses_validate(
 ) -> None:
     payload = json.loads((RESPONSE_FIXTURES / filename).read_text())
     response = VisualResponse.model_validate(payload)
-    
+
     assert response.status == expected_status
-    
-    
+
+
 def test_malformed_fake_response_is_rejected() -> None:
     payload = json.loads((RESPONSE_FIXTURES / "malformed.json").read_text())
-    
+
     with pytest.raises(ValidationError):
         VisualResponse.model_validate(payload)
-        
-        
+
+
 def test_test_suite_blocks_network_access() -> None:
     with pytest.raises(AssertionError, match="network access"):
-        socket.create_connection(("127.0.0.1", 9), timeout=0.01) 
+        socket.create_connection(("127.0.0.1", 9), timeout=0.01)

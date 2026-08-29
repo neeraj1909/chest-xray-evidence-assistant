@@ -17,6 +17,9 @@ dev = [
     "pytest>=8.3,<9",
     "ruff>=0.9,<1",
 ]
+agent = [
+    "pydantic-ai-slim>=2.36,<3",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/chest_xray_evidence_assistant"]
@@ -31,4 +34,3 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
-
