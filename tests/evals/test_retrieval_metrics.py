@@ -28,6 +28,7 @@ def test_ragas_report_is_retrieval_only_and_uses_id_precision_and_recall() -> No
     assert report.framework.version == "0.3.9"
     assert report.metric_scope == "retrieval_only"
     assert report.safety_evaluator == "deterministic_grader"
+    assert report.artifact_manifest == agent_report.artifact_manifest
     assert report.case_count == 24
     assert {case.category for case in agent_report.cases if case.case_id in report.case_ids} == {
         "retrieval"

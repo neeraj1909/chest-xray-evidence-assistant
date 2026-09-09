@@ -10,11 +10,19 @@ from .models import (
     NormalizedBoundingBox,
     QuestionContext,
     RunLimits,
+    RunTrace,
     SourceEvidence,
     VisualEvidence,
     VisualResponse,
 )
-from .runtime import BudgetExceeded, BudgetSnapshot, RunBudget, ToolBudgetScope
+from .observability import RunTraceCollector, TraceRedactionReport, audit_trace_redaction
+from .runtime import (
+    BudgetExceeded,
+    BudgetSnapshot,
+    DependencyUnavailable,
+    RunBudget,
+    ToolBudgetScope,
+)
 
 __all__ = [
     "AgentTraceEvent",
@@ -22,6 +30,7 @@ __all__ = [
     "BudgetSnapshot",
     "ContractModel",
     "DeterministicModelAdapter",
+    "DependencyUnavailable",
     "EvidenceRequest",
     "ImageAsset",
     "ImageLocator",
@@ -30,8 +39,12 @@ __all__ = [
     "QuestionContext",
     "RunLimits",
     "RunBudget",
+    "RunTrace",
+    "RunTraceCollector",
     "SourceEvidence",
     "ToolBudgetScope",
+    "TraceRedactionReport",
     "VisualEvidence",
     "VisualResponse",
+    "audit_trace_redaction",
 ]

@@ -14,6 +14,7 @@ from chest_xray_evidence_assistant.evals.grading import (
     RunUsage,
     canonical_sha256,
     grade_run,
+    usage_trace_payload,
 )
 from chest_xray_evidence_assistant.models import RunLimits, VisualResponse
 
@@ -26,64 +27,26 @@ def _case(category: str) -> BenchmarkCase:
     return next(case for case in BENCHMARK.cases if case.category == category)
 
 
+def _passing_usage(case: BenchmarkCase) -> RunUsage:
+    image = BENCHMARK.image_for(case)
+    return RunUsage(
+        duration_ms=7,
+        estimated_cost_usd=Decimal("0"),
+        image_bytes=image.asset.byte_size,
+        input_tokens=32,
+        model_requests=1,
+        output_tokens=64,
+        recovered=False,
+        tool_calls=len(case.expected.tool_calls),
+    )
+
+
 def _passing_response(case: BenchmarkCase) -> dict[str, Any]:
-    tool_events = [
-        {
-            "duration_ms": 1,
-            "failure_code": None,
-            "input_sha256": canonical_sha256(call.arguments),
-            "kind": "tool",
-            "name": call.name,
-            "output_sha256": ZERO_DIGEST,
-            "sequence": index + 1,
-            "status": "succeeded",
-        }
-        for index, call in enumerate(case.expected.tool_calls)
-    ]
-    model_sequence = len(tool_events) + 1
-    trace = [
-        {
-            "input_sha256": ZERO_DIGEST,
-            "kind": "request",
-            "name": "cxr-evidence-agent",
-            "sequence": 0,
-            "status": "started",
-        },
-        *tool_events,
-        {
-            "attributes": {
-                "model_requests": 1,
-                "provider": "offline-eval",
-                "tool_calls": len(tool_events),
-            },
-            "input_sha256": ZERO_DIGEST,
-            "kind": "model",
-            "name": "deterministic-policy",
-            "output_sha256": ZERO_DIGEST,
-            "sequence": model_sequence,
-            "status": "succeeded",
-        },
-        {
-            "input_sha256": ZERO_DIGEST,
-            "kind": "validation",
-            "name": "visual-response",
-            "output_sha256": ZERO_DIGEST,
-            "sequence": model_sequence + 1,
-            "status": "succeeded",
-        },
-        {
-            "kind": "final",
-            "name": case.expected.status,
-            "output_sha256": ZERO_DIGEST,
-            "sequence": model_sequence + 2,
-            "status": "succeeded",
-        },
-    ]
     common: dict[str, Any] = {
         "confidence": 0.8 if case.expected.status == "answered" else 0.0,
         "observations": [],
         "source_evidence": [],
-        "trace": trace,
+        "trace": [],
         "uncertainty": ["Synthetic benchmark evidence only."],
         "visual_evidence": [],
     }
@@ -122,17 +85,89 @@ def _passing_response(case: BenchmarkCase) -> dict[str, Any]:
     response_sha256 = canonical_sha256(
         VisualResponse.model_validate(payload).model_dump(mode="json", exclude={"trace"})
     )
-    trace[-3] = {
-        **trace[-3],
-        "name": "full_agent",
-        "output_sha256": response_sha256,
-    }
-    trace[-2] = {
-        **trace[-2],
-        "input_sha256": response_sha256,
-        "output_sha256": response_sha256,
-    }
-    trace[-1] = {**trace[-1], "output_sha256": response_sha256}
+    tool_events = [
+        {
+            "duration_ms": 1,
+            "failure_code": None,
+            "input_sha256": canonical_sha256(call.arguments),
+            "kind": "retrieval" if call.name == "retrieve_reference" else "tool_call",
+            "name": call.name,
+            "output_sha256": ZERO_DIGEST,
+            "run_replay_id": ZERO_DIGEST,
+            "sequence": index + 1,
+            "status": "succeeded",
+        }
+        for index, call in enumerate(case.expected.tool_calls)
+    ]
+    trace: list[dict[str, Any]] = [
+        {
+            "input_sha256": ZERO_DIGEST,
+            "kind": "run",
+            "name": "cxr-evidence-agent",
+            "run_replay_id": ZERO_DIGEST,
+            "sequence": 0,
+            "status": "started",
+        },
+        *tool_events,
+        {
+            "attributes": {
+                "model_requests": 1,
+                "provider": "offline-eval",
+                "tool_calls": len(tool_events),
+            },
+            "input_sha256": ZERO_DIGEST,
+            "kind": "model_request",
+            "name": "full_agent",
+            "output_sha256": response_sha256,
+            "run_replay_id": ZERO_DIGEST,
+            "sequence": len(tool_events) + 1,
+            "status": "succeeded",
+        },
+        {
+            "input_sha256": response_sha256,
+            "kind": "verification",
+            "name": "visual-response",
+            "output_sha256": response_sha256,
+            "run_replay_id": ZERO_DIGEST,
+            "sequence": len(tool_events) + 2,
+            "status": "succeeded",
+        },
+    ]
+    if case.expected.status == "abstain":
+        trace.append(
+            {
+                "kind": "abstention",
+                "name": "safe-abstention",
+                "output_sha256": response_sha256,
+                "run_replay_id": ZERO_DIGEST,
+                "sequence": len(trace),
+                "status": "succeeded",
+            }
+        )
+    budget_payload = usage_trace_payload(_passing_usage(case))
+    trace.extend(
+        (
+            {
+                "attributes": budget_payload,
+                "duration_ms": 7,
+                "kind": "budget",
+                "name": "run-budget",
+                "output_sha256": canonical_sha256(budget_payload),
+                "run_replay_id": ZERO_DIGEST,
+                "sequence": len(trace),
+                "status": "succeeded",
+            },
+            {
+                "kind": "final_status",
+                "name": case.expected.status,
+                "output_sha256": response_sha256,
+                "run_replay_id": ZERO_DIGEST,
+                "sequence": len(trace) + 1,
+                "status": "succeeded",
+            },
+        )
+    )
+    payload["trace"] = trace
     return payload
 
 
@@ -147,23 +182,13 @@ def _passing_run(case: BenchmarkCase) -> ObservedRun:
         )
         for index, call in enumerate(case.expected.tool_calls)
     )
-    image = BENCHMARK.image_for(case)
     return ObservedRun(
         case_id=case.case_id,
         configuration_id="full_agent",
         response_payload=_passing_response(case),
         tool_calls=tool_calls,
         limits=RunLimits(),
-        usage=RunUsage(
-            duration_ms=7,
-            estimated_cost_usd=Decimal("0"),
-            image_bytes=image.asset.byte_size,
-            input_tokens=32,
-            model_requests=1,
-            output_tokens=64,
-            recovered=False,
-            tool_calls=len(tool_calls),
-        ),
+        usage=_passing_usage(case),
     )
 
 
@@ -345,7 +370,13 @@ def test_trace_rejects_a_tampered_validation_event() -> None:
     run = _passing_run(case)
     payload = dict(run.response_payload)
     trace = [dict(event) for event in payload["trace"]]
-    trace[-2] = {**trace[-2], "name": "unrelated-validator"}
+    validation_index = next(
+        index for index, event in enumerate(trace) if event["kind"] == "verification"
+    )
+    trace[validation_index] = {
+        **trace[validation_index],
+        "name": "unrelated-validator",
+    }
     payload["trace"] = trace
 
     grade = grade_run(case, run.model_copy(update={"response_payload": payload}))

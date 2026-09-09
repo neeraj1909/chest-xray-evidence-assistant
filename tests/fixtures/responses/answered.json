@@ -20,12 +20,5 @@
   "uncertainty": [
     "This is a synthetic non-clinical test pattern."
   ],
-  "trace": [
-    {
-      "sequence": 0,
-      "kind": "final",
-      "status": "succeeded",
-      "name": "deterministic_fake"
-    }
-  ]
+  "trace": []
 }

@@ -13,6 +13,7 @@ from pydantic import Field, model_validator
 from ..models import AgentTraceEvent, ContractModel, Identifier, Sha256Digest, ShortText
 from .datasets import BenchmarkDataset, BenchmarkSplit, ExpectedStatus, TaskCategory
 from .grading import RunGrade, canonical_sha256, grade_run
+from .manifest import EvaluationArtifactManifest, build_evaluation_manifest
 from .offline import AblationConfiguration, OfflineAblationTask
 from .pydantic_adapter import build_pydantic_dataset
 
@@ -121,6 +122,7 @@ class ConfigurationReport(ContractModel):
     case_count: int = Field(gt=0)
     case_set_sha256: Sha256Digest
     configuration: AblationConfiguration
+    artifact_manifest: EvaluationArtifactManifest
     framework: FrameworkEvidence
     metrics: AggregateMetrics
     cases: tuple[CaseEvaluation, ...] = Field(min_length=1, max_length=2_048)
@@ -135,6 +137,10 @@ class ConfigurationReport(ContractModel):
             raise ValueError("report case-set fingerprint does not match")
         if self.configuration.dataset_sha256 != self.dataset_sha256:
             raise ValueError("report and configuration target different datasets")
+        if not self.artifact_manifest.matches_configuration(self.configuration):
+            raise ValueError("artifact manifest does not match report configuration")
+        if self.artifact_manifest.framework_versions["pydantic-evals"] != self.framework.version:
+            raise ValueError("artifact manifest has a stale Pydantic Evals version")
         if any(case.configuration_id != self.configuration.configuration_id for case in self.cases):
             raise ValueError("report contains a case from another configuration")
         if self.metrics.case_count != self.case_count:
@@ -317,6 +323,13 @@ def run_configuration(
         case_count=len(cases),
         case_set_sha256=canonical_sha256([case.case_id for case in cases]),
         configuration=configuration,
+        artifact_manifest=build_evaluation_manifest(
+            configuration,
+            framework_versions={
+                "pydantic-evals": version("pydantic-evals"),
+                "ragas": version("ragas"),
+            },
+        ),
         framework=framework,
         metrics=aggregate_metrics(cases),
         cases=cases,

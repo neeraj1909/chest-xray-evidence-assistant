@@ -41,6 +41,10 @@ def test_fixed_matrix_uses_identical_comparison_inputs_and_passes_exit_gate() ->
     ]
     assert len(bundle.agent_reports) == 5
     assert len(bundle.retrieval_reports) == 5
+    assert len(bundle.manifest_index.manifests) == 5
+    assert tuple(item.artifact_manifest_sha256 for item in summary.configurations) == tuple(
+        manifest.manifest_sha256 for manifest in bundle.manifest_index.manifests
+    )
     assert summary.runner_mode == "offline_scripted"
     assert summary.token_accounting == "alphanumeric-span-estimate-v1"
     assert summary.latency_accounting == "deterministic-estimate-v1"
@@ -76,6 +80,19 @@ def test_fixed_matrix_uses_identical_comparison_inputs_and_passes_exit_gate() ->
     assert MatrixSummaryReport.model_validate_json(SUMMARY_FIXTURE.read_bytes()) == summary
 
 
+def test_matrix_reports_bounded_performance_and_cost_samples() -> None:
+    summary = MatrixSummaryReport.model_validate_json(SUMMARY_FIXTURE.read_bytes())
+
+    for configuration in summary.configurations:
+        metrics = configuration.agent_metrics
+        assert metrics.latency_p95_ms >= metrics.latency_p50_ms
+        assert metrics.model_requests_total <= summary.case_count * 2
+        assert metrics.tool_calls_total <= summary.case_count * 3
+        assert metrics.output_tokens_total <= summary.case_count * 2_048
+        assert metrics.estimated_cost_usd_total <= summary.case_count * 0.25
+        assert metrics.budget_violation_rate == 0.0
+
+
 def test_matrix_bundle_is_machine_readable_and_byte_repeatable(tmp_path: Path) -> None:
     bundle = run_matrix(BENCHMARK)
     first_root = tmp_path / "first"
@@ -86,10 +103,11 @@ def test_matrix_bundle_is_machine_readable_and_byte_repeatable(tmp_path: Path) -
 
     assert first_summary == first_root / "matrix-summary.json"
     assert second_summary == second_root / "matrix-summary.json"
-    assert len(_tree_hashes(first_root)) == 11
+    assert len(_tree_hashes(first_root)) == 12
     assert _tree_hashes(first_root) == _tree_hashes(second_root)
     loaded = MatrixSummaryReport.model_validate_json(first_summary.read_bytes())
     assert loaded == bundle.summary
+    assert (first_root / "evaluation-manifest.json").is_file()
     serialized = first_summary.read_text(encoding="utf-8").casefold()
     assert "raw_prompt" not in serialized
     assert "image_bytes" not in serialized

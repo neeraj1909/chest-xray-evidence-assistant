@@ -4,6 +4,8 @@ import asyncio
 import json
 import os
 
+from pydantic_ai.exceptions import ModelAPIError
+
 from chest_xray_evidence_assistant.agent import run_evidence_request
 from chest_xray_evidence_assistant.baselines import load_baseline_case
 from chest_xray_evidence_assistant.models import EvidenceRequest
@@ -31,6 +33,9 @@ def main() -> int:
     except ProviderConfigError:
         print(json.dumps({"status": "failed", "error_code": "live_config_invalid"}))
         return 2
+    except ModelAPIError:
+        print(json.dumps({"status": "failed", "error_code": "live_model_unavailable"}))
+        return 1
     except Exception as exc:
         print(
             json.dumps(

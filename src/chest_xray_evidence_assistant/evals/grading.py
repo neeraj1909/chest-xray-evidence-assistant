@@ -92,6 +92,21 @@ class RunUsage(ContractModel):
     recovered: bool = False
 
 
+def usage_trace_payload(usage: RunUsage) -> dict[str, ToolArgumentValue]:
+    """Project run usage to stable, non-secret budget-event attributes."""
+
+    return {
+        "duration_ms": usage.duration_ms,
+        "estimated_cost_usd": str(usage.estimated_cost_usd),
+        "image_byte_count": usage.image_bytes,
+        "input_tokens": usage.input_tokens,
+        "model_requests": usage.model_requests,
+        "output_tokens": usage.output_tokens,
+        "recovered": usage.recovered,
+        "tool_calls": usage.tool_calls,
+    }
+
+
 class ObservedRun(ContractModel):
     """Raw model/tool observation accepted even when its response schema is invalid."""
 
@@ -253,17 +268,22 @@ def _trace_grade(response: VisualResponse | None, observation: ObservedRun) -> b
         return False
     trace = response.trace
     expected_kinds = [
-        "request",
-        *("tool" for _ in observation.tool_calls),
-        "model",
-        "validation",
-        "final",
+        "run",
+        *(
+            "retrieval" if call.name == "retrieve_reference" else "tool_call"
+            for call in observation.tool_calls
+        ),
+        "model_request",
+        "verification",
+        *("abstention" for _ in range(int(response.status == "abstain"))),
+        "budget",
+        "final_status",
     ]
     if [event.sequence for event in trace] != list(range(len(trace))):
         return False
     if [event.kind for event in trace] != expected_kinds:
         return False
-    tool_events = [event for event in trace if event.kind == "tool"]
+    tool_events = [event for event in trace if event.kind in {"tool_call", "retrieval"}]
     for event, call in zip(tool_events, observation.tool_calls, strict=True):
         if (
             event.name != call.name
@@ -274,14 +294,17 @@ def _trace_grade(response: VisualResponse | None, observation: ObservedRun) -> b
         ):
             return False
     request_event = trace[0]
-    model_event = trace[-3]
-    validation_event = trace[-2]
+    model_event = next(event for event in trace if event.kind == "model_request")
+    validation_event = next(event for event in trace if event.kind == "verification")
+    budget_event = next(event for event in trace if event.kind == "budget")
     final_event = trace[-1]
     response_sha256 = canonical_sha256(response.model_dump(mode="json", exclude={"trace"}))
+    budget_payload = usage_trace_payload(observation.usage)
     return (
         request_event.name == "cxr-evidence-agent"
         and request_event.status == "started"
         and request_event.input_sha256 is not None
+        and all(event.run_replay_id == request_event.input_sha256 for event in trace)
         and model_event.name == observation.configuration_id
         and model_event.status == "succeeded"
         and model_event.input_sha256 == request_event.input_sha256
@@ -292,6 +315,10 @@ def _trace_grade(response: VisualResponse | None, observation: ObservedRun) -> b
         and validation_event.status == "succeeded"
         and validation_event.input_sha256 == response_sha256
         and validation_event.output_sha256 == response_sha256
+        and budget_event.name == "run-budget"
+        and budget_event.status == "succeeded"
+        and budget_event.output_sha256 == canonical_sha256(budget_payload)
+        and budget_event.attributes == budget_payload
         and final_event.name == response.status
         and final_event.status == "succeeded"
         and final_event.output_sha256 == response_sha256

@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 from pydantic_ai import models
-from pydantic_ai.exceptions import UnexpectedModelBehavior
+from pydantic_ai.exceptions import ModelAPIError, UnexpectedModelBehavior
 from pydantic_ai.messages import ModelResponse, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.models.test import TestModel
@@ -26,14 +26,22 @@ from chest_xray_evidence_assistant.models import (
     RunLimits,
     VisualResponse,
 )
+from chest_xray_evidence_assistant.observability import RunTraceCollector
 from chest_xray_evidence_assistant.retrieval import (
     InMemoryBM25Index,
     LexicalReferenceService,
     ScoredChunk,
     load_reference_corpus,
 )
-from chest_xray_evidence_assistant.runtime import BudgetExceeded
-from chest_xray_evidence_assistant.tools import FixtureImageTools
+from chest_xray_evidence_assistant.runtime import BudgetExceeded, DependencyUnavailable
+from chest_xray_evidence_assistant.tools import (
+    CropImageArguments,
+    CropImageResult,
+    FixtureImageTools,
+    GetImageMetadataArguments,
+    ImageMetadataResult,
+    RetrieveReferenceArguments,
+)
 
 models.ALLOW_MODEL_REQUESTS = False
 
@@ -56,6 +64,70 @@ class SlowTestModel(TestModel):
     async def request(self, *args: Any, **kwargs: Any) -> Any:
         await asyncio.sleep(0.05)
         return await super().request(*args, **kwargs)
+
+
+class UnavailableModel(TestModel):
+    def __init__(self) -> None:
+        super().__init__()
+        self.request_count = 0
+
+    async def request(self, *args: Any, **kwargs: Any) -> Any:
+        del args, kwargs
+        self.request_count += 1
+        raise ModelAPIError(
+            "unavailable-test-model",
+            "authorization=must-not-enter-the-trace",
+        )
+
+
+class UnavailableImageTools:
+    def __init__(self) -> None:
+        self.call_count = 0
+
+    async def crop_image(self, arguments: CropImageArguments) -> CropImageResult:
+        del arguments
+        self.call_count += 1
+        raise DependencyUnavailable("image_tool_unavailable") from RuntimeError(
+            "credential=must-not-enter-the-trace"
+        )
+
+    async def get_image_metadata(
+        self,
+        arguments: GetImageMetadataArguments,
+    ) -> ImageMetadataResult:
+        del arguments
+        self.call_count += 1
+        raise DependencyUnavailable("image_tool_unavailable") from RuntimeError(
+            "credential=must-not-enter-the-trace"
+        )
+
+
+class UnavailableRetriever:
+    def __init__(self) -> None:
+        self.call_count = 0
+
+    async def retrieve_reference(
+        self,
+        arguments: RetrieveReferenceArguments,
+    ) -> tuple[ScoredChunk, ...]:
+        del arguments
+        self.call_count += 1
+        raise DependencyUnavailable("retrieval_unavailable") from RuntimeError(
+            "authorization=must-not-enter-the-trace"
+        )
+
+
+class InvalidRetriever:
+    def __init__(self) -> None:
+        self.call_count = 0
+
+    async def retrieve_reference(
+        self,
+        arguments: RetrieveReferenceArguments,
+    ) -> tuple[ScoredChunk, ...]:
+        del arguments
+        self.call_count += 1
+        return (object(),)  # type: ignore[return-value]
 
 
 def fixture_request() -> tuple[EvidenceRequest, bytes]:
@@ -99,6 +171,22 @@ def exact_tool_model(
     return FunctionModel(respond, model_name="exact-tool-model"), observed_tools
 
 
+def repeating_tool_model(
+    tool_name: str,
+    arguments: dict[str, object],
+) -> tuple[FunctionModel, list[int]]:
+    request_count = [0]
+
+    def respond(messages: list[object], info: AgentInfo) -> ModelResponse:
+        del messages, info
+        request_count[0] += 1
+        return ModelResponse(
+            parts=[ToolCallPart(tool_name, arguments, tool_call_id=f"call-{request_count[0]}")]
+        )
+
+    return FunctionModel(respond, model_name="repeating-tool-model"), request_count
+
+
 def source_evidence_payload(result: ScoredChunk) -> dict[str, object]:
     chunk = result.chunk
     return {
@@ -130,14 +218,16 @@ def test_fake_model_completes_one_bounded_multimodal_request() -> None:
     assert response.status == "answered"
     assert response.visual_evidence[0].locator.image_id == request.image.image_id
     assert [event.kind for event in response.trace] == [
-        "request",
-        "model",
-        "validation",
-        "final",
+        "run",
+        "model_request",
+        "verification",
+        "budget",
+        "final_status",
     ]
     assert response.trace[1].attributes["model_requests"] == 1
     assert response.trace[1].attributes["tool_calls"] == 0
     assert all(event.input_sha256 or event.output_sha256 for event in response.trace)
+    assert {event.run_replay_id for event in response.trace} == {response.trace[0].input_sha256}
 
 
 def test_malformed_model_output_gets_only_one_bounded_repair() -> None:
@@ -202,6 +292,164 @@ def test_request_timeout_cancels_slow_model_work() -> None:
         )
 
 
+def test_failed_run_records_a_redacted_budget_error_trace() -> None:
+    request, image_bytes = fixture_request()
+    request = request.model_copy(
+        update={
+            "question": QuestionContext(question="Bearer should-never-appear in failure telemetry"),
+            "limits": RunLimits(timeout_seconds=0.01),
+        }
+    )
+    collector = RunTraceCollector()
+
+    with pytest.raises(BudgetExceeded, match="^timeout$"):
+        asyncio.run(
+            run_evidence_request(
+                request,
+                image_bytes,
+                model=SlowTestModel(custom_output_args=response_payload("answered.json")),
+                trace_collector=collector,
+            )
+        )
+
+    trace = collector.trace
+    assert trace is not None
+    assert [event.kind for event in trace.events] == [
+        "run",
+        "budget",
+        "error",
+        "final_status",
+    ]
+    assert trace.events[-2].failure_code == "timeout"
+    assert trace.events[-1].status == "failed"
+    assert len({event.run_replay_id for event in trace.events}) == 1
+    assert "Bearer" not in trace.model_dump_json()
+
+
+def test_unavailable_model_ends_once_with_a_redacted_safe_code() -> None:
+    request, image_bytes = fixture_request()
+    model = UnavailableModel()
+    collector = RunTraceCollector()
+
+    with pytest.raises(ModelAPIError):
+        asyncio.run(
+            run_evidence_request(
+                request,
+                image_bytes,
+                model=model,
+                trace_collector=collector,
+            )
+        )
+
+    trace = collector.trace
+    assert trace is not None
+    assert model.request_count == 1
+    assert trace.events[-1].failure_code == "model_unavailable"
+    assert sum(event.kind == "final_status" for event in trace.events) == 1
+    budget_event = next(event for event in trace.events if event.kind == "budget")
+    assert budget_event.attributes["model_requests"] == 1
+    assert "authorization" not in trace.model_dump_json()
+
+
+def test_unavailable_image_tool_stops_within_request_and_tool_limits() -> None:
+    request, image_bytes = fixture_request()
+    image_tools = UnavailableImageTools()
+    model, request_count = repeating_tool_model(
+        "get_image_metadata",
+        {"image_id": request.image.image_id},
+    )
+    collector = RunTraceCollector()
+
+    with pytest.raises(DependencyUnavailable, match="^image_tool_unavailable$"):
+        asyncio.run(
+            run_evidence_request(
+                request,
+                image_bytes,
+                model=model,
+                tool_services=AgentToolServices(image_tools=image_tools),
+                trace_collector=collector,
+            )
+        )
+
+    trace = collector.trace
+    assert trace is not None
+    assert request_count[0] == 1
+    assert image_tools.call_count == 1
+    assert trace.events[-1].failure_code == "image_tool_unavailable"
+    assert sum(event.kind == "final_status" for event in trace.events) == 1
+    budget_event = next(event for event in trace.events if event.kind == "budget")
+    assert budget_event.attributes["model_requests"] == 1
+    assert budget_event.attributes["tool_calls"] == 1
+    assert "credential" not in trace.model_dump_json()
+
+
+def test_unavailable_retrieval_stops_within_request_and_tool_limits() -> None:
+    request, image_bytes = fixture_request()
+    image_tools = FixtureImageTools.from_manifest(FIXTURE_ROOT / "manifest.json")
+    retriever = UnavailableRetriever()
+    model, request_count = repeating_tool_model(
+        "retrieve_reference",
+        {"query": "bounded public reference query", "top_k": 1},
+    )
+    collector = RunTraceCollector()
+
+    with pytest.raises(DependencyUnavailable, match="^retrieval_unavailable$"):
+        asyncio.run(
+            run_evidence_request(
+                request,
+                image_bytes,
+                model=model,
+                tool_services=AgentToolServices(
+                    image_tools=image_tools,
+                    reference_retriever=retriever,
+                ),
+                trace_collector=collector,
+            )
+        )
+
+    trace = collector.trace
+    assert trace is not None
+    assert request_count[0] == 1
+    assert retriever.call_count == 1
+    assert trace.events[-1].failure_code == "retrieval_unavailable"
+    assert sum(event.kind == "final_status" for event in trace.events) == 1
+    budget_event = next(event for event in trace.events if event.kind == "budget")
+    assert budget_event.attributes["model_requests"] == 1
+    assert budget_event.attributes["tool_calls"] == 1
+    assert "authorization" not in trace.model_dump_json()
+
+
+def test_invalid_retrieval_result_fails_closed_to_abstention() -> None:
+    request, image_bytes = fixture_request()
+    retriever = InvalidRetriever()
+    model, _ = exact_tool_model(
+        "retrieve_reference",
+        {"query": "bounded public reference query", "top_k": 1},
+        response_payload("abstain.json"),
+    )
+
+    response = asyncio.run(
+        run_evidence_request(
+            request,
+            image_bytes,
+            model=model,
+            tool_services=AgentToolServices(
+                image_tools=FixtureImageTools.from_manifest(FIXTURE_ROOT / "manifest.json"),
+                reference_retriever=retriever,
+            ),
+        )
+    )
+
+    rejected = next(event for event in response.trace if event.kind == "retrieval")
+    budget = next(event for event in response.trace if event.kind == "budget")
+    assert response.status == "abstain"
+    assert retriever.call_count == 1
+    assert rejected.status == "rejected"
+    assert rejected.failure_code == "invalid_tool_result"
+    assert budget.attributes["model_requests"] == 2
+    assert budget.attributes["tool_calls"] == 1
+
+
 def test_tool_enabled_agent_dispatches_through_exact_registry_and_records_trace() -> None:
     request, image_bytes = fixture_request()
     model, observed_tools = exact_tool_model(
@@ -226,14 +474,14 @@ def test_tool_enabled_agent_dispatches_through_exact_registry_and_records_trace(
         "get_image_metadata",
         "retrieve_reference",
     )
-    tool_events = [event for event in response.trace if event.kind == "tool"]
+    tool_events = [event for event in response.trace if event.kind == "tool_call"]
     assert len(tool_events) == 1
     assert tool_events[0].name == "get_image_metadata"
     assert tool_events[0].status == "succeeded"
     assert tool_events[0].duration_ms is not None
     assert tool_events[0].duration_ms >= 0
     assert tool_events[0].attributes["tool_calls"] == 1
-    assert response.trace[-1].kind == "final"
+    assert response.trace[-1].kind == "final_status"
 
 
 def test_tool_required_path_beats_the_zero_tool_path_on_expected_trajectory() -> None:
@@ -276,7 +524,7 @@ def test_tool_required_path_beats_the_zero_tool_path_on_expected_trajectory() ->
 
     def tool_required_score(response: VisualResponse) -> int:
         has_crop_artifact = any(
-            event.kind == "tool"
+            event.kind == "tool_call"
             and event.name == "crop_image"
             and event.status == "succeeded"
             and event.attributes.get("artifact_sha256") == crop_sha256
@@ -323,7 +571,9 @@ def test_retrieved_source_evidence_requires_the_authorized_result_and_trace() ->
 
     assert response.source_evidence[0].document_id == expected.chunk.document_id
     assert any(
-        event.kind == "tool" and event.name == "retrieve_reference" and event.status == "succeeded"
+        event.kind == "retrieval"
+        and event.name == "retrieve_reference"
+        and event.status == "succeeded"
         for event in response.trace
     )
     retrieval_event = next(event for event in response.trace if event.name == "retrieve_reference")

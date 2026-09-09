@@ -12,6 +12,7 @@ from pydantic import Field, model_validator
 
 from ..models import ContractModel, Identifier, Sha256Digest, ShortText
 from .datasets import BenchmarkDataset
+from .manifest import EvaluationManifestIndex
 from .offline import CONFIGURATION_IDS, ConfigurationId, build_ablation_configurations
 from .reporting import (
     AggregateMetrics,
@@ -31,11 +32,13 @@ class ComparisonFingerprints(ContractModel):
     rubric_sha256: Sha256Digest
     response_schema_sha256: Sha256Digest
     retrieval_index_sha256: Sha256Digest
+    corpus_sha256: Sha256Digest
 
 
 class MatrixConfigurationSummary(ContractModel):
     configuration_id: ConfigurationId
     configuration_sha256: Sha256Digest
+    artifact_manifest_sha256: Sha256Digest
     agent_report_path: ShortText
     agent_report_sha256: Sha256Digest
     retrieval_report_path: ShortText
@@ -80,6 +83,8 @@ class MatrixSummaryReport(ContractModel):
     case_count: int = Field(gt=0)
     comparison: ComparisonFingerprints
     frameworks: MatrixFrameworks
+    evaluation_manifest_path: Literal["evaluation-manifest.json"]
+    evaluation_manifest_sha256: Sha256Digest
     configurations: tuple[MatrixConfigurationSummary, ...]
     exit_gate: MatrixExitGate
 
@@ -122,6 +127,22 @@ class MatrixBundle:
     summary: MatrixSummaryReport
     agent_reports: tuple[ConfigurationReport, ...]
     retrieval_reports: tuple[RetrievalMetricsReport, ...]
+    manifest_index: EvaluationManifestIndex
+
+    def __post_init__(self) -> None:
+        if (
+            _text_sha256(_serialize_model(self.manifest_index))
+            != self.summary.evaluation_manifest_sha256
+        ):
+            raise ValueError("matrix evaluation manifest fingerprint does not match")
+        summary_manifests = tuple(
+            item.artifact_manifest_sha256 for item in self.summary.configurations
+        )
+        indexed_manifests = tuple(
+            manifest.manifest_sha256 for manifest in self.manifest_index.manifests
+        )
+        if summary_manifests != indexed_manifests:
+            raise ValueError("matrix summaries do not match the evaluation manifest index")
 
 
 def _serialize_model(model: ContractModel) -> str:
@@ -138,6 +159,7 @@ def run_matrix(benchmark: BenchmarkDataset) -> MatrixBundle:
     retrieval_reports = tuple(build_retrieval_report(report) for report in agent_reports)
     common_sets = {
         "case_set": {report.case_set_sha256 for report in agent_reports},
+        "corpus": {report.configuration.corpus_sha256 for report in agent_reports},
         "dataset": {report.configuration.dataset_sha256 for report in agent_reports},
         "limits": {report.configuration.limits_sha256 for report in agent_reports},
         "prompts": {report.configuration.prompt_set_sha256 for report in agent_reports},
@@ -157,6 +179,12 @@ def run_matrix(benchmark: BenchmarkDataset) -> MatrixBundle:
         rubric_sha256=first_configuration.rubric_sha256,
         response_schema_sha256=first_configuration.response_schema_sha256,
         retrieval_index_sha256=first_configuration.retrieval_index_sha256,
+        corpus_sha256=first_configuration.corpus_sha256,
+    )
+    manifest_index = EvaluationManifestIndex.build(
+        dataset_id=benchmark.manifest.dataset_id,
+        dataset_version=benchmark.manifest.dataset_version,
+        manifests=tuple(report.artifact_manifest for report in agent_reports),
     )
     summaries: list[MatrixConfigurationSummary] = []
     for configuration, agent_report, retrieval_report in zip(
@@ -171,9 +199,10 @@ def run_matrix(benchmark: BenchmarkDataset) -> MatrixBundle:
             MatrixConfigurationSummary(
                 configuration_id=configuration.configuration_id,
                 configuration_sha256=configuration.configuration_sha256,
-                agent_report_path=(f"agent/{configuration.configuration_id}.json"),
+                artifact_manifest_sha256=agent_report.artifact_manifest.manifest_sha256,
+                agent_report_path=f"agent/{configuration.configuration_id}.json",
                 agent_report_sha256=_text_sha256(agent_content),
-                retrieval_report_path=(f"retrieval/{configuration.configuration_id}.json"),
+                retrieval_report_path=f"retrieval/{configuration.configuration_id}.json",
                 retrieval_report_sha256=_text_sha256(retrieval_content),
                 agent_metrics=agent_report.metrics,
                 context_precision_mean=retrieval_report.context_precision_mean,
@@ -189,8 +218,8 @@ def run_matrix(benchmark: BenchmarkDataset) -> MatrixBundle:
     unauthorized_zero = full_agent.unauthorized_tool_calls == 0
     safety_zero = full_agent.high_severity_safety_failures == 0
     gate = MatrixExitGate(
-        one_shot_tool_required_task_success_rate=(one_shot.tool_required_task_success_rate),
-        full_agent_tool_required_task_success_rate=(full_agent.tool_required_task_success_rate),
+        one_shot_tool_required_task_success_rate=one_shot.tool_required_task_success_rate,
+        full_agent_tool_required_task_success_rate=full_agent.tool_required_task_success_rate,
         full_agent_beats_one_shot_on_tool_required=beats_one_shot,
         full_agent_unauthorized_tool_calls_zero=unauthorized_zero,
         full_agent_high_severity_safety_failures_zero=safety_zero,
@@ -206,6 +235,8 @@ def run_matrix(benchmark: BenchmarkDataset) -> MatrixBundle:
             pydantic_evals=agent_reports[0].framework.version,
             ragas=retrieval_reports[0].framework.version,
         ),
+        evaluation_manifest_path="evaluation-manifest.json",
+        evaluation_manifest_sha256=_text_sha256(_serialize_model(manifest_index)),
         configurations=tuple(summaries),
         exit_gate=gate,
     )
@@ -213,6 +244,7 @@ def run_matrix(benchmark: BenchmarkDataset) -> MatrixBundle:
         summary=summary,
         agent_reports=agent_reports,
         retrieval_reports=retrieval_reports,
+        manifest_index=manifest_index,
     )
 
 
@@ -228,6 +260,13 @@ def write_matrix_bundle(bundle: MatrixBundle, output_root: Path) -> Path:
         raise ValueError("benchmark output must be a directory")
     (root / "agent").mkdir(parents=True, exist_ok=True)
     (root / "retrieval").mkdir(parents=True, exist_ok=True)
+    manifest_content = _serialize_model(bundle.manifest_index)
+    if _text_sha256(manifest_content) != bundle.summary.evaluation_manifest_sha256:
+        raise ValueError("evaluation manifest changed after matrix assembly")
+    (root / bundle.summary.evaluation_manifest_path).write_text(
+        manifest_content,
+        encoding="utf-8",
+    )
     for summary, agent_report, retrieval_report in zip(
         bundle.summary.configurations,
         bundle.agent_reports,

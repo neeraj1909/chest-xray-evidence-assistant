@@ -1,0 +1,119 @@
+{
+  "events": [
+    {
+      "attributes": {},
+      "duration_ms": null,
+      "failure_code": null,
+      "input_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "kind": "run",
+      "name": "cxr-evidence-agent",
+      "output_sha256": null,
+      "run_replay_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sequence": 0,
+      "status": "started"
+    },
+    {
+      "attributes": {
+        "image_byte_count": 634,
+        "tool_calls": 1
+      },
+      "duration_ms": 1,
+      "failure_code": null,
+      "input_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "kind": "tool_call",
+      "name": "get_image_metadata",
+      "output_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "run_replay_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sequence": 1,
+      "status": "succeeded"
+    },
+    {
+      "attributes": {
+        "result_count": 1,
+        "tool_calls": 2
+      },
+      "duration_ms": 1,
+      "failure_code": null,
+      "input_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "kind": "retrieval",
+      "name": "retrieve_reference",
+      "output_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "run_replay_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sequence": 2,
+      "status": "succeeded"
+    },
+    {
+      "attributes": {
+        "model_requests": 1,
+        "provider": "offline-fixture",
+        "tool_calls": 2
+      },
+      "duration_ms": null,
+      "failure_code": null,
+      "input_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "kind": "model_request",
+      "name": "fixture-model-v1",
+      "output_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "run_replay_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sequence": 3,
+      "status": "succeeded"
+    },
+    {
+      "attributes": {},
+      "duration_ms": null,
+      "failure_code": null,
+      "input_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "kind": "verification",
+      "name": "visual-response",
+      "output_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "run_replay_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sequence": 4,
+      "status": "succeeded"
+    },
+    {
+      "attributes": {},
+      "duration_ms": null,
+      "failure_code": null,
+      "input_sha256": null,
+      "kind": "abstention",
+      "name": "safe-abstention",
+      "output_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "run_replay_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sequence": 5,
+      "status": "succeeded"
+    },
+    {
+      "attributes": {
+        "estimated_cost_usd": "0",
+        "image_byte_count": 634,
+        "model_requests": 1,
+        "output_tokens": 48,
+        "repairs": 0,
+        "tool_calls": 2
+      },
+      "duration_ms": null,
+      "failure_code": null,
+      "input_sha256": null,
+      "kind": "budget",
+      "name": "run-budget",
+      "output_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "run_replay_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sequence": 6,
+      "status": "succeeded"
+    },
+    {
+      "attributes": {},
+      "duration_ms": null,
+      "failure_code": null,
+      "input_sha256": null,
+      "kind": "final_status",
+      "name": "abstain",
+      "output_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "run_replay_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sequence": 7,
+      "status": "succeeded"
+    }
+  ],
+  "run_replay_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "schema_version": 1
+}

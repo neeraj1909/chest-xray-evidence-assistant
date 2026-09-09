@@ -1,0 +1,61 @@
+{
+  "events": [
+    {
+      "attributes": {},
+      "duration_ms": null,
+      "failure_code": null,
+      "input_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+      "kind": "run",
+      "name": "cxr-evidence-agent",
+      "output_sha256": null,
+      "run_replay_id": "2222222222222222222222222222222222222222222222222222222222222222",
+      "sequence": 0,
+      "status": "started"
+    },
+    {
+      "attributes": {
+        "estimated_cost_usd": "0",
+        "image_byte_count": 634,
+        "model_requests": 0,
+        "output_tokens": 0,
+        "repairs": 0,
+        "tool_calls": 0
+      },
+      "duration_ms": null,
+      "failure_code": "timeout",
+      "input_sha256": null,
+      "kind": "budget",
+      "name": "run-budget",
+      "output_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+      "run_replay_id": "2222222222222222222222222222222222222222222222222222222222222222",
+      "sequence": 1,
+      "status": "rejected"
+    },
+    {
+      "attributes": {},
+      "duration_ms": null,
+      "failure_code": "timeout",
+      "input_sha256": null,
+      "kind": "error",
+      "name": "model_request-error",
+      "output_sha256": null,
+      "run_replay_id": "2222222222222222222222222222222222222222222222222222222222222222",
+      "sequence": 2,
+      "status": "failed"
+    },
+    {
+      "attributes": {},
+      "duration_ms": null,
+      "failure_code": "timeout",
+      "input_sha256": null,
+      "kind": "final_status",
+      "name": "failed",
+      "output_sha256": null,
+      "run_replay_id": "2222222222222222222222222222222222222222222222222222222222222222",
+      "sequence": 3,
+      "status": "failed"
+    }
+  ],
+  "run_replay_id": "2222222222222222222222222222222222222222222222222222222222222222",
+  "schema_version": 1
+}

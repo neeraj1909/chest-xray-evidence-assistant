@@ -1,0 +1,31 @@
+name: cxr-evidence-assistant
+
+services:
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cxr-evidence-assistant:local
+    init: true
+    restart: "no"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=67108864
+    ports:
+      - "127.0.0.1:${CXR_UI_PORT:-7860}:7860"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:7860/', timeout=1).read(1)
+      interval: 2s
+      timeout: 2s
+      start_period: 10s
+      retries: 15
+    stop_grace_period: 10s

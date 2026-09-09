@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+import re
+from typing import Annotated, Literal, TypeAlias
 
 from pydantic import (
     BaseModel,
@@ -44,6 +45,50 @@ TraceText = Annotated[
     StringConstraints(strip_whitespace=True, min_length=1, max_length=256),
 ]
 TraceValue = TraceText | int | float | bool | None
+RunEventKind: TypeAlias = Literal[
+    "run",
+    "model_request",
+    "tool_call",
+    "retrieval",
+    "verification",
+    "abstention",
+    "error",
+    "budget",
+    "final_status",
+]
+
+_SENSITIVE_TRACE_KEYS = frozenset(
+    {
+        "access_token",
+        "accession_number",
+        "address",
+        "api_key",
+        "authorization",
+        "command",
+        "date_of_birth",
+        "dicom_header",
+        "dob",
+        "email",
+        "excerpt",
+        "image_bytes",
+        "image_data",
+        "mrn",
+        "path",
+        "patient_id",
+        "patient_name",
+        "phone",
+        "prompt",
+        "query",
+        "raw_prompt",
+        "secret",
+    }
+)
+_SENSITIVE_TRACE_KEY_FORMS = frozenset(key.replace("_", "") for key in _SENSITIVE_TRACE_KEYS)
+_SENSITIVE_TRACE_VALUE = re.compile(
+    r"(?i)(?:bearer\s+\S+|sk-[a-z0-9_-]{16,}|-----BEGIN[^-]*PRIVATE KEY-----|"
+    r"[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?"
+    r"(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+)"
+)
 
 
 class ContractModel(BaseModel):
@@ -142,7 +187,8 @@ class AgentTraceEvent(ContractModel):
     """Redacted, deterministic trace metadata; never raw prompts or image bytes."""
 
     sequence: int = Field(ge=0)
-    kind: Literal["request", "model", "tool", "validation", "final"]
+    run_replay_id: Sha256Digest
+    kind: RunEventKind
     status: Literal["started", "succeeded", "rejected", "failed"]
     name: Identifier | None = None
     duration_ms: int | None = Field(default=None, ge=0)
@@ -160,18 +206,66 @@ class AgentTraceEvent(ContractModel):
         cls,
         attributes: dict[str, TraceValue],
     ) -> dict[str, TraceValue]:
-        forbidden = {
-            "prompt",
-            "raw_prompt",
-            "image_bytes",
-            "authorization",
-            "api_key",
-            "secret",
-            "access_token",
-        }
-        if forbidden.intersection(key.lower() for key in attributes):
-            raise ValueError("trace attributes cannot contain sensitive payloads")
+        normalized_keys = {re.sub(r"[^a-z0-9]+", "", key.casefold()) for key in attributes}
+        if _SENSITIVE_TRACE_KEY_FORMS.intersection(normalized_keys):
+            raise ValueError("trace attributes cannot contain sensitive keys")
+        if any(
+            isinstance(value, str) and _SENSITIVE_TRACE_VALUE.search(value)
+            for value in attributes.values()
+        ):
+            raise ValueError("trace attributes cannot contain sensitive values")
         return attributes
+
+    @model_validator(mode="after")
+    def require_safe_outcome_shape(self) -> AgentTraceEvent:
+        if self.kind == "error" and self.failure_code is None:
+            raise ValueError("error events require a stable failure code")
+        if self.status == "succeeded" and self.failure_code is not None:
+            raise ValueError("successful events cannot include a failure code")
+        return self
+
+
+class RunTrace(ContractModel):
+    """One terminal, replay-identifiable event ledger for a run attempt."""
+
+    schema_version: Literal[1] = 1
+    run_replay_id: Sha256Digest
+    events: tuple[AgentTraceEvent, ...] = Field(min_length=2, max_length=64)
+
+    @model_validator(mode="after")
+    def validate_event_ledger(self) -> RunTrace:
+        if [event.sequence for event in self.events] != list(range(len(self.events))):
+            raise ValueError("run trace event sequences must be contiguous")
+        if any(event.run_replay_id != self.run_replay_id for event in self.events):
+            raise ValueError("run trace events must share one replay identity")
+        if self.events[0].kind != "run" or self.events[0].status != "started":
+            raise ValueError("run trace must start with a started run event")
+        if self.events[-1].kind != "final_status":
+            raise ValueError("run trace must end with a final-status event")
+        kinds = [event.kind for event in self.events]
+        if any(kinds.count(kind) != 1 for kind in ("run", "budget", "final_status")):
+            raise ValueError("run trace requires one run, budget, and final-status event")
+        terminal_status = self.events[-1].status
+        if terminal_status == "succeeded":
+            if (
+                kinds.count("model_request") != 1
+                or kinds.count("verification") != 1
+                or "error" in kinds
+                or next(event for event in self.events if event.kind == "budget").status
+                != "succeeded"
+            ):
+                raise ValueError("successful run trace is incomplete")
+        elif terminal_status == "failed" and kinds.count("error") == 1:
+            error_event = next(event for event in self.events if event.kind == "error")
+            if (
+                error_event.status != "failed"
+                or self.events[-1].failure_code is None
+                or error_event.failure_code != self.events[-1].failure_code
+            ):
+                raise ValueError("failed run trace has inconsistent failure metadata")
+        else:
+            raise ValueError("failed run trace requires budget and error events")
+        return self
 
 
 class VisualResponse(ContractModel):
@@ -213,5 +307,16 @@ class VisualResponse(ContractModel):
                 raise ValueError("abstentions require only an abstention reason")
             if self.clarification_question is not None:
                 raise ValueError("abstentions cannot include a clarification question")
+
+        if self.trace:
+            RunTrace(
+                run_replay_id=self.trace[0].run_replay_id,
+                events=tuple(self.trace),
+            )
+            if self.trace[-1].name != self.status:
+                raise ValueError("final trace status does not match the response")
+            abstentions = sum(event.kind == "abstention" for event in self.trace)
+            if abstentions != int(self.status == "abstain"):
+                raise ValueError("trace abstention events do not match the response")
 
         return self

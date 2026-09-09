@@ -22,12 +22,25 @@ BudgetFailureCode: TypeAlias = Literal[
     "timeout",
     "tool_call_limit",
 ]
+DependencyFailureCode: TypeAlias = Literal[
+    "image_tool_unavailable",
+    "model_unavailable",
+    "retrieval_unavailable",
+]
 
 
 class BudgetExceeded(RuntimeError):
     """Report a stable budget failure without echoing request content."""
 
     def __init__(self, code: BudgetFailureCode) -> None:
+        self.code = code
+        super().__init__(code)
+
+
+class DependencyUnavailable(RuntimeError):
+    """Report an unavailable runtime dependency without retaining provider text."""
+
+    def __init__(self, code: DependencyFailureCode) -> None:
         self.code = code
         super().__init__(code)
 

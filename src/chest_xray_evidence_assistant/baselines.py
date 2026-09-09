@@ -84,7 +84,7 @@ class BaselineArtifact(ContractModel):
         if self.configuration.image_sha256 != self.request.image.sha256:
             raise ValueError("baseline configuration has a stale image digest")
 
-        model_events = [event for event in self.response.trace if event.kind == "model"]
+        model_events = [event for event in self.response.trace if event.kind == "model_request"]
         if len(model_events) != 1 or model_events[0].attributes.get("tool_calls") != 0:
             raise ValueError("one-shot baseline must record exactly one zero-tool model event")
         if model_events[0].attributes.get("model_requests") != 1:

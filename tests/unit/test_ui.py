@@ -4,6 +4,7 @@ import asyncio
 from pathlib import Path
 
 import pytest
+from pydantic_ai.exceptions import ModelAPIError
 
 import chest_xray_evidence_assistant.ui as ui_module
 from chest_xray_evidence_assistant.fixtures import load_fixture_manifest
@@ -14,6 +15,7 @@ from chest_xray_evidence_assistant.models import (
     VisualEvidence,
     VisualResponse,
 )
+from chest_xray_evidence_assistant.runtime import DependencyUnavailable
 from chest_xray_evidence_assistant.ui import (
     DEMO_QUESTION,
     UIInputRejected,
@@ -127,7 +129,9 @@ def test_offline_demo_exposes_answer_clarification_and_abstention_states() -> No
     assert answered.answer is not None
     assert answered.visual_evidence[0].locator == "full frame: synthetic-full-frame"
     assert any(
-        event.kind == "tool" and event.name == "get_image_metadata" and event.status == "succeeded"
+        event.kind == "tool_call"
+        and event.name == "get_image_metadata"
+        and event.status == "succeeded"
         for event in answered.trace
     )
     assert clarification.state == "needs_clarification"
@@ -135,6 +139,14 @@ def test_offline_demo_exposes_answer_clarification_and_abstention_states() -> No
     assert abstention.state == "abstain"
     assert "Insufficient visual evidence" in abstention.message
     assert all(result.latency_ms >= 0 for result in (answered, clarification, abstention))
+
+
+def test_missing_image_submission_requests_clarification() -> None:
+    result = asyncio.run(process_submission(None, DEMO_QUESTION, None, True))
+
+    assert result.state == "needs_clarification"
+    assert result.error_code == "missing_image"
+    assert "Choose one bundled synthetic PNG" in result.message
 
 
 def test_rendered_trace_omits_prompts_bytes_digests_and_attributes() -> None:
@@ -154,23 +166,66 @@ def test_rendered_trace_omits_prompts_bytes_digests_and_attributes() -> None:
         trace=[
             AgentTraceEvent(
                 sequence=0,
-                kind="tool",
+                run_replay_id="d" * 64,
+                kind="run",
+                status="started",
+                name="cxr-evidence-agent",
+                input_sha256="d" * 64,
+            ),
+            AgentTraceEvent(
+                sequence=1,
+                run_replay_id="d" * 64,
+                kind="tool_call",
                 status="succeeded",
                 name="get_image_metadata",
                 duration_ms=17,
                 input_sha256="a" * 64,
                 output_sha256="b" * 64,
                 attributes={"provider": "private-provider", "replay_id": "c" * 64},
-            )
+            ),
+            AgentTraceEvent(
+                sequence=2,
+                run_replay_id="d" * 64,
+                kind="model_request",
+                status="succeeded",
+                name="fixture-model",
+                input_sha256="d" * 64,
+                output_sha256="b" * 64,
+            ),
+            AgentTraceEvent(
+                sequence=3,
+                run_replay_id="d" * 64,
+                kind="verification",
+                status="succeeded",
+                name="visual-response",
+                input_sha256="b" * 64,
+                output_sha256="b" * 64,
+            ),
+            AgentTraceEvent(
+                sequence=4,
+                run_replay_id="d" * 64,
+                kind="budget",
+                status="succeeded",
+                name="run-budget",
+                output_sha256="b" * 64,
+            ),
+            AgentTraceEvent(
+                sequence=5,
+                run_replay_id="d" * 64,
+                kind="final_status",
+                status="succeeded",
+                name="answered",
+                output_sha256="b" * 64,
+            ),
         ],
     )
 
     rendered = render_response(response, latency_ms=19)
     serialized = rendered.model_dump_json()
 
-    assert rendered.trace[0].model_dump() == {
-        "sequence": 0,
-        "kind": "tool",
+    assert rendered.trace[1].model_dump() == {
+        "sequence": 1,
+        "kind": "tool_call",
         "name": "get_image_metadata",
         "status": "succeeded",
         "duration_ms": 17,
@@ -180,6 +235,7 @@ def test_rendered_trace_omits_prompts_bytes_digests_and_attributes() -> None:
     assert "a" * 64 not in serialized
     assert "b" * 64 not in serialized
     assert "c" * 64 not in serialized
+    assert "d" * 64 not in serialized
 
 
 def test_rendered_bounding_box_uses_normalized_coordinates() -> None:
@@ -235,6 +291,52 @@ def test_internal_runner_failure_returns_a_fixed_recovery_message() -> None:
     assert "Try again" in result.message
 
 
+@pytest.mark.parametrize(
+    ("error", "code", "message_fragment"),
+    [
+        (
+            ModelAPIError("unavailable-test-model", "authorization=must-not-render"),
+            "model_unavailable",
+            "model service is unavailable",
+        ),
+        (
+            DependencyUnavailable("retrieval_unavailable"),
+            "retrieval_unavailable",
+            "reference search is unavailable",
+        ),
+        (
+            DependencyUnavailable("image_tool_unavailable"),
+            "image_tool_unavailable",
+            "image inspection service is unavailable",
+        ),
+    ],
+)
+def test_dependency_failures_return_specific_safe_recovery_states(
+    error: Exception,
+    code: str,
+    message_fragment: str,
+) -> None:
+    async def failing_runner(request: object, image_bytes: bytes) -> VisualResponse:
+        del request, image_bytes
+        raise error
+
+    result = asyncio.run(
+        process_submission(
+            fixture_bytes("synthetic-full-frame"),
+            DEMO_QUESTION,
+            None,
+            True,
+            runner=failing_runner,
+        )
+    )
+
+    assert result.state == "error"
+    assert result.error_code == code
+    assert message_fragment in result.message
+    assert any("No result was produced" in item for item in result.uncertainty)
+    assert "authorization" not in result.model_dump_json()
+
+
 def test_launch_boundary_is_local_private_and_bounded(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeApp:
         def __init__(self) -> None:
@@ -246,8 +348,15 @@ def test_launch_boundary_is_local_private_and_bounded(monkeypatch: pytest.Monkey
     app = FakeApp()
     monkeypatch.setattr(ui_module, "build_app", lambda: app)
 
-    assert launch_app(port=7_861, prevent_thread_lock=True) is app
-    assert app.launch_arguments["server_name"] == "127.0.0.1"
+    assert (
+        launch_app(
+            host="0.0.0.0",
+            port=7_861,
+            prevent_thread_lock=True,
+        )
+        is app
+    )
+    assert app.launch_arguments["server_name"] == "0.0.0.0"
     assert app.launch_arguments["server_port"] == 7_861
     assert app.launch_arguments["share"] is False
     assert app.launch_arguments["run_history"] is False
@@ -260,3 +369,20 @@ def test_launch_boundary_is_local_private_and_bounded(monkeypatch: pytest.Monkey
 
     with pytest.raises(ValueError, match="port"):
         launch_app(port=80)
+    with pytest.raises(ValueError, match="host"):
+        launch_app(host="public.example")  # type: ignore[arg-type]
+
+
+def test_cli_defaults_to_loopback_and_allows_explicit_container_binding(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    launches: list[tuple[str, int]] = []
+    monkeypatch.setattr(
+        ui_module,
+        "launch_app",
+        lambda *, host, port: launches.append((host, port)),
+    )
+
+    assert ui_module.main([]) == 0
+    assert ui_module.main(["--host", "0.0.0.0", "--port", "7862"]) == 0
+    assert launches == [("127.0.0.1", 7_860), ("0.0.0.0", 7_862)]

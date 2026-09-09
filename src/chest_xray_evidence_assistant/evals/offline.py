@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from decimal import Decimal
 from typing import Literal, TypeAlias
@@ -11,6 +12,7 @@ from pydantic import model_validator
 from ..models import (
     AgentTraceEvent,
     ContractModel,
+    Identifier,
     ImageAsset,
     Sha256Digest,
     VisualResponse,
@@ -25,6 +27,7 @@ from .grading import (
     RunGrade,
     RunUsage,
     canonical_sha256,
+    usage_trace_payload,
 )
 from .pydantic_adapter import EvaluationInput
 
@@ -76,6 +79,8 @@ class AblationConfiguration(ContractModel):
     image_access: bool
     metadata_tool: bool
     retrieval_tool: bool
+    dataset_id: Identifier
+    dataset_version: Identifier
     dataset_sha256: Sha256Digest
     case_set_sha256: Sha256Digest
     seed_set_sha256: Sha256Digest
@@ -84,6 +89,7 @@ class AblationConfiguration(ContractModel):
     rubric_sha256: Sha256Digest
     response_schema_sha256: Sha256Digest
     retrieval_index_sha256: Sha256Digest
+    corpus_sha256: Sha256Digest
     configuration_sha256: Sha256Digest
 
     @model_validator(mode="after")
@@ -119,6 +125,8 @@ def build_ablation_configurations(
     corpus = load_reference_corpus()
     index = InMemoryBM25Index.from_corpus(corpus)
     common = {
+        "dataset_id": benchmark.manifest.dataset_id,
+        "dataset_version": benchmark.manifest.dataset_version,
         "dataset_sha256": benchmark.manifest.dataset_sha256,
         "case_set_sha256": canonical_sha256([case.case_id for case in benchmark.cases]),
         "seed_set_sha256": canonical_sha256([case.seed for case in benchmark.cases]),
@@ -138,6 +146,7 @@ def build_ablation_configurations(
         "rubric_sha256": canonical_sha256(RunGrade.model_json_schema()),
         "response_schema_sha256": canonical_sha256(VisualResponse.model_json_schema()),
         "retrieval_index_sha256": index.fingerprint,
+        "corpus_sha256": corpus.manifest.corpus_fingerprint,
     }
     capabilities = {
         "text_only": (False, False, False),
@@ -396,68 +405,11 @@ class OfflineAblationTask:
         )
         response_digest = canonical_sha256(normalized_payload)
         request_digest = canonical_sha256(inputs)
-        trace: list[AgentTraceEvent] = [
-            AgentTraceEvent(
-                sequence=0,
-                kind="request",
-                status="started",
-                name="cxr-evidence-agent",
-                input_sha256=request_digest,
-            )
-        ]
-        trace.extend(
-            AgentTraceEvent(
-                sequence=index + 1,
-                kind="tool",
-                status=call.status,
-                name=call.name,
-                duration_ms=1,
-                input_sha256=canonical_sha256(call.arguments),
-                output_sha256=call.result_sha256,
-                failure_code=call.failure_code,
-            )
-            for index, call in enumerate(tool_calls)
-        )
-        model_sequence = len(trace)
-        trace.extend(
-            (
-                AgentTraceEvent(
-                    sequence=model_sequence,
-                    kind="model",
-                    status="succeeded",
-                    name=self.configuration.configuration_id,
-                    input_sha256=request_digest,
-                    output_sha256=response_digest,
-                    attributes={
-                        "provider": "offline-scripted",
-                        "model_requests": 1,
-                        "tool_calls": len(tool_calls),
-                    },
-                ),
-                AgentTraceEvent(
-                    sequence=model_sequence + 1,
-                    kind="validation",
-                    status="succeeded",
-                    name="visual-response",
-                    input_sha256=response_digest,
-                    output_sha256=response_digest,
-                ),
-                AgentTraceEvent(
-                    sequence=model_sequence + 2,
-                    kind="final",
-                    status="succeeded",
-                    name=str(payload["status"]),
-                    output_sha256=response_digest,
-                ),
-            )
-        )
-        payload["trace"] = [event.model_dump(mode="json") for event in trace]
-        response = VisualResponse.model_validate(payload)
         input_tokens = len(re.findall(r"[A-Za-z0-9]+", inputs.prompt))
         output_tokens = len(
             re.findall(
                 r"[A-Za-z0-9]+",
-                response.model_dump_json(exclude={"trace"}),
+                json.dumps(normalized_payload, separators=(",", ":"), sort_keys=True),
             )
         )
         latency_base = {
@@ -477,6 +429,94 @@ class OfflineAblationTask:
             estimated_cost_usd=Decimal("0"),
             recovered=False,
         )
+        trace: list[AgentTraceEvent] = [
+            AgentTraceEvent(
+                sequence=0,
+                run_replay_id=request_digest,
+                kind="run",
+                status="started",
+                name="cxr-evidence-agent",
+                input_sha256=request_digest,
+            )
+        ]
+        trace.extend(
+            AgentTraceEvent(
+                sequence=index + 1,
+                run_replay_id=request_digest,
+                kind="retrieval" if call.name == "retrieve_reference" else "tool_call",
+                status=call.status,
+                name=call.name,
+                duration_ms=1,
+                input_sha256=canonical_sha256(call.arguments),
+                output_sha256=call.result_sha256,
+                failure_code=call.failure_code,
+            )
+            for index, call in enumerate(tool_calls)
+        )
+        model_sequence = len(trace)
+        trace.extend(
+            (
+                AgentTraceEvent(
+                    sequence=model_sequence,
+                    run_replay_id=request_digest,
+                    kind="model_request",
+                    status="succeeded",
+                    name=self.configuration.configuration_id,
+                    input_sha256=request_digest,
+                    output_sha256=response_digest,
+                    attributes={
+                        "provider": "offline-scripted",
+                        "model_requests": 1,
+                        "tool_calls": len(tool_calls),
+                    },
+                ),
+                AgentTraceEvent(
+                    sequence=model_sequence + 1,
+                    run_replay_id=request_digest,
+                    kind="verification",
+                    status="succeeded",
+                    name="visual-response",
+                    input_sha256=response_digest,
+                    output_sha256=response_digest,
+                ),
+            )
+        )
+        if payload["status"] == "abstain":
+            trace.append(
+                AgentTraceEvent(
+                    sequence=len(trace),
+                    run_replay_id=request_digest,
+                    kind="abstention",
+                    status="succeeded",
+                    name="safe-abstention",
+                    output_sha256=response_digest,
+                )
+            )
+        budget_payload = usage_trace_payload(usage)
+        trace.extend(
+            (
+                AgentTraceEvent(
+                    sequence=len(trace),
+                    run_replay_id=request_digest,
+                    kind="budget",
+                    status="succeeded",
+                    name="run-budget",
+                    duration_ms=usage.duration_ms,
+                    output_sha256=canonical_sha256(budget_payload),
+                    attributes=budget_payload,
+                ),
+                AgentTraceEvent(
+                    sequence=len(trace) + 1,
+                    run_replay_id=request_digest,
+                    kind="final_status",
+                    status="succeeded",
+                    name=str(payload["status"]),
+                    output_sha256=response_digest,
+                ),
+            )
+        )
+        payload["trace"] = [event.model_dump(mode="json") for event in trace]
+        response = VisualResponse.model_validate(payload)
         return ObservedRun(
             case_id=inputs.case_id,
             configuration_id=self.configuration.configuration_id,

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Literal, TypeAlias
 
 from pydantic import Field, HttpUrl
+from pydantic_ai.exceptions import ModelAPIError
 
 from .agent import AgentToolServices, run_evidence_request
 from .fixtures import load_fixture_manifest
@@ -23,6 +24,7 @@ from .models import (
     ShortText,
     VisualResponse,
 )
+from .runtime import DependencyUnavailable
 from .tools import FixtureImageTools
 
 DEMO_QUESTION = "What can be observed in this synthetic fixture?"
@@ -41,6 +43,7 @@ UIState: TypeAlias = Literal[
     "abstain",
     "error",
 ]
+LaunchHost: TypeAlias = Literal["127.0.0.1", "0.0.0.0"]
 
 
 class UIInputRejected(ValueError):
@@ -70,7 +73,17 @@ class UITraceEvent(ContractModel):
     """The exact allow-list of trace fields safe for browser display."""
 
     sequence: int = Field(ge=0)
-    kind: Literal["request", "model", "tool", "validation", "final"]
+    kind: Literal[
+        "run",
+        "model_request",
+        "tool_call",
+        "retrieval",
+        "verification",
+        "abstention",
+        "error",
+        "budget",
+        "final_status",
+    ]
     name: Identifier | None = None
     status: Literal["started", "succeeded", "rejected", "failed"]
     duration_ms: int | None = Field(default=None, ge=0)
@@ -319,15 +332,23 @@ def _error_result(code: str, *, latency_ms: int) -> UIRenderedResult:
         "fixture_unavailable": "The verified demo fixtures are unavailable. Restart the app.",
         "invalid_context": "Additional context must contain 1–8,000 characters or be empty.",
         "invalid_question": "Enter a question between 1 and 4,000 characters.",
+        "image_tool_unavailable": (
+            "The local image inspection service is unavailable. Restart the app and try again."
+        ),
         "missing_image": "Choose one bundled synthetic PNG before running the demo.",
+        "model_unavailable": "The model service is unavailable. Check it before trying again.",
+        "retrieval_unavailable": (
+            "The reference search is unavailable. Restart the app and try again."
+        ),
         "unsupported_image": (
             "This offline demo accepts only the exact bundled synthetic PNG fixtures."
         ),
         "run_failed": "The offline run did not complete. Try again or restart the app.",
     }
+    needs_image = code == "missing_image"
     return UIRenderedResult(
-        state="error",
-        title="Request not run",
+        state="needs_clarification" if needs_image else "error",
+        title="Image required" if needs_image else "Request not run",
         message=messages.get(code, messages["run_failed"]),
         uncertainty=("No result was produced from this request.",),
         latency_ms=latency_ms,
@@ -358,6 +379,12 @@ async def process_submission(
         latency_ms = max(0, round((clock() - started) * 1_000))
         return render_response(response, latency_ms=latency_ms)
     except UIInputRejected as error:
+        latency_ms = max(0, round((clock() - started) * 1_000))
+        return _error_result(error.code, latency_ms=latency_ms)
+    except ModelAPIError:
+        latency_ms = max(0, round((clock() - started) * 1_000))
+        return _error_result("model_unavailable", latency_ms=latency_ms)
+    except DependencyUnavailable as error:
         latency_ms = max(0, round((clock() - started) * 1_000))
         return _error_result(error.code, latency_ms=latency_ms)
     except Exception:
@@ -609,14 +636,21 @@ bundled synthetic PNGs in `data/fixtures/images/`; all other files fail closed.
     return app.queue(api_open=False, max_size=8, default_concurrency_limit=1)
 
 
-def launch_app(*, port: int = 7860, prevent_thread_lock: bool = False) -> object:
+def launch_app(
+    *,
+    host: LaunchHost = "127.0.0.1",
+    port: int = 7860,
+    prevent_thread_lock: bool = False,
+) -> object:
     """Launch one local-only UI with file, history, and monitoring limits."""
 
+    if host not in {"127.0.0.1", "0.0.0.0"}:
+        raise ValueError("host must be loopback or the container bind address")
     if isinstance(port, bool) or not 1_024 <= port <= 65_535:
         raise ValueError("port must be between 1024 and 65535")
     app = build_app()
     app.launch(
-        server_name="127.0.0.1",
+        server_name=host,
         server_port=port,
         share=False,
         inbrowser=False,
@@ -642,9 +676,14 @@ def launch_app(*, port: int = 7860, prevent_thread_lock: bool = False) -> object
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the local offline fixture UI.")
+    parser.add_argument(
+        "--host",
+        choices=("127.0.0.1", "0.0.0.0"),
+        default="127.0.0.1",
+    )
     parser.add_argument("--port", type=int, default=7_860)
     arguments = parser.parse_args(argv)
-    launch_app(port=arguments.port)
+    launch_app(host=arguments.host, port=arguments.port)
     return 0
 
 

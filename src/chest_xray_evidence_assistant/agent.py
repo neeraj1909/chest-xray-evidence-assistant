@@ -4,23 +4,31 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import re
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Any
+from typing import Any, Never
 
 from pydantic_ai import Agent, BinaryContent, ModelRetry, RunContext, UsageLimits
+from pydantic_ai.exceptions import ModelAPIError
+from pydantic_ai.messages import ModelMessage, ModelResponse
+from pydantic_ai.models import ModelRequestParameters
+from pydantic_ai.models.wrapper import WrapperModel
+from pydantic_ai.settings import ModelSettings
 
 from .models import (
     AgentTraceEvent,
     EvidenceRequest,
     Identifier,
     NormalizedBoundingBox,
+    RunTrace,
     TraceValue,
     VisualResponse,
 )
+from .observability import RunTraceCollector
 from .retrieval.records import ScoredChunk
-from .runtime import BudgetExceeded, RunBudget
+from .runtime import BudgetExceeded, BudgetSnapshot, DependencyUnavailable, RunBudget
 from .tools import (
     BoundedToolExecutor,
     CropImageResult,
@@ -50,6 +58,38 @@ class AgentToolServices:
     reference_retriever: ReferenceRetrievalPort | None = None
 
 
+class _BudgetedModel(WrapperModel):
+    """Charge the parent budget immediately before every provider request."""
+
+    def __init__(self, model: Any, budget: RunBudget) -> None:
+        super().__init__(model)
+        self._budget = budget
+
+    async def request(
+        self,
+        messages: list[ModelMessage],
+        model_settings: ModelSettings | None,
+        model_request_parameters: ModelRequestParameters,
+    ) -> ModelResponse:
+        self._budget.consume_model_requests()
+        return await self.wrapped.request(
+            messages,
+            model_settings,
+            model_request_parameters,
+        )
+
+
+def _raise_tool_error(
+    error: BudgetExceeded | ImageToolRejected | ToolCallRejected | ToolExecutionRejected,
+) -> Never:
+    if isinstance(error, ToolExecutionRejected) and error.code in {
+        "image_tool_unavailable",
+        "retrieval_unavailable",
+    }:
+        raise DependencyUnavailable(error.code) from None
+    raise ModelRetry(error.code) from None
+
+
 async def crop_image(
     context: RunContext[BoundedToolExecutor],
     image_id: Identifier,
@@ -63,7 +103,7 @@ async def crop_image(
             {"image_id": image_id, "box": box.model_dump(mode="json")},
         )
     except (BudgetExceeded, ImageToolRejected, ToolCallRejected, ToolExecutionRejected) as error:
-        raise ModelRetry(error.code) from None
+        _raise_tool_error(error)
     if not isinstance(result, CropImageResult):
         raise ModelRetry("tool_result_mismatch")
     return result
@@ -78,7 +118,7 @@ async def get_image_metadata(
     try:
         result = await context.deps.execute("get_image_metadata", {"image_id": image_id})
     except (BudgetExceeded, ImageToolRejected, ToolCallRejected, ToolExecutionRejected) as error:
-        raise ModelRetry(error.code) from None
+        _raise_tool_error(error)
     if not isinstance(result, ImageMetadataResult):
         raise ModelRetry("tool_result_mismatch")
     return result
@@ -97,7 +137,7 @@ async def retrieve_reference(
             {"query": query, "top_k": top_k},
         )
     except (BudgetExceeded, ImageToolRejected, ToolCallRejected, ToolExecutionRejected) as error:
-        raise ModelRetry(error.code) from None
+        _raise_tool_error(error)
     if not isinstance(result, tuple):
         raise ModelRetry("tool_result_mismatch")
     return result
@@ -213,6 +253,28 @@ def _tool_trace_attributes(record: ToolCallRecord) -> dict[str, TraceValue]:
     return attributes
 
 
+def _budget_trace_payload(snapshot: BudgetSnapshot) -> dict[str, TraceValue]:
+    return {
+        "estimated_cost_usd": str(snapshot.estimated_cost_usd),
+        "image_byte_count": snapshot.image_bytes,
+        "model_requests": snapshot.model_requests,
+        "output_tokens": snapshot.output_tokens,
+        "repairs": snapshot.repairs,
+        "tool_calls": snapshot.tool_calls,
+    }
+
+
+def _digest_trace_payload(payload: dict[str, TraceValue]) -> str:
+    encoded = json.dumps(
+        payload,
+        allow_nan=False,
+        ensure_ascii=True,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
 def _with_runtime_trace(
     response: VisualResponse,
     *,
@@ -220,6 +282,7 @@ def _with_runtime_trace(
     model_name: str,
     provider_name: str,
     model_requests: int,
+    budget_snapshot: BudgetSnapshot,
     tool_records: tuple[ToolCallRecord, ...] = (),
 ) -> VisualResponse:
     output_digest = hashlib.sha256(
@@ -228,7 +291,8 @@ def _with_runtime_trace(
     trace = [
         AgentTraceEvent(
             sequence=0,
-            kind="request",
+            run_replay_id=request_digest,
+            kind="run",
             status="started",
             name=AGENT_NAME,
             input_sha256=request_digest,
@@ -237,7 +301,8 @@ def _with_runtime_trace(
     trace.extend(
         AgentTraceEvent(
             sequence=index + 1,
-            kind="tool",
+            run_replay_id=request_digest,
+            kind="retrieval" if record.name == "retrieve_reference" else "tool_call",
             status=record.status,
             name=record.name,
             duration_ms=max(
@@ -256,7 +321,8 @@ def _with_runtime_trace(
         [
             AgentTraceEvent(
                 sequence=model_sequence,
-                kind="model",
+                run_replay_id=request_digest,
+                kind="model_request",
                 status="succeeded",
                 name=_trace_identifier(model_name, "model"),
                 input_sha256=request_digest,
@@ -269,24 +335,144 @@ def _with_runtime_trace(
             ),
             AgentTraceEvent(
                 sequence=model_sequence + 1,
-                kind="validation",
+                run_replay_id=request_digest,
+                kind="verification",
                 status="succeeded",
                 name="visual-response",
                 input_sha256=output_digest,
                 output_sha256=output_digest,
             ),
+        ]
+    )
+    if response.status == "abstain":
+        trace.append(
             AgentTraceEvent(
-                sequence=model_sequence + 2,
-                kind="final",
+                sequence=len(trace),
+                run_replay_id=request_digest,
+                kind="abstention",
+                status="succeeded",
+                name="safe-abstention",
+                output_sha256=output_digest,
+            )
+        )
+    budget_payload = _budget_trace_payload(budget_snapshot)
+    trace.extend(
+        (
+            AgentTraceEvent(
+                sequence=len(trace),
+                run_replay_id=request_digest,
+                kind="budget",
+                status="succeeded",
+                name="run-budget",
+                output_sha256=_digest_trace_payload(budget_payload),
+                attributes=budget_payload,
+            ),
+            AgentTraceEvent(
+                sequence=len(trace) + 1,
+                run_replay_id=request_digest,
+                kind="final_status",
                 status="succeeded",
                 name=response.status,
                 output_sha256=output_digest,
             ),
-        ]
+        )
     )
     payload = response.model_dump(mode="json")
     payload["trace"] = [event.model_dump(mode="json") for event in trace]
     return VisualResponse.model_validate(payload)
+
+
+def _failure_code(
+    error: Exception,
+    *,
+    phase: str,
+    tool_records: tuple[ToolCallRecord, ...],
+) -> str:
+    if isinstance(error, BudgetExceeded):
+        return error.code
+    if isinstance(error, DependencyUnavailable):
+        return error.code
+    if isinstance(error, ModelAPIError):
+        return "model_unavailable"
+    if tool_records and tool_records[-1].failure_code is not None:
+        return tool_records[-1].failure_code
+    return {
+        "input": "input_validation_failed",
+        "model_request": "model_request_failed",
+        "verification": "verification_failed",
+    }.get(phase, "run_failed")
+
+
+def _failure_runtime_trace(
+    *,
+    request_digest: str,
+    budget_snapshot: BudgetSnapshot,
+    error: Exception,
+    phase: str,
+    tool_records: tuple[ToolCallRecord, ...],
+) -> RunTrace:
+    failure_code = _failure_code(error, phase=phase, tool_records=tool_records)
+    events: list[AgentTraceEvent] = [
+        AgentTraceEvent(
+            sequence=0,
+            run_replay_id=request_digest,
+            kind="run",
+            status="started",
+            name=AGENT_NAME,
+            input_sha256=request_digest,
+        )
+    ]
+    events.extend(
+        AgentTraceEvent(
+            sequence=index + 1,
+            run_replay_id=request_digest,
+            kind="retrieval" if record.name == "retrieve_reference" else "tool_call",
+            status=record.status,
+            name=record.name,
+            duration_ms=max(
+                0,
+                record.budget_after.elapsed_ms - record.budget_before.elapsed_ms,
+            ),
+            input_sha256=record.arguments_sha256,
+            output_sha256=record.result_sha256,
+            failure_code=record.failure_code,
+            attributes=_tool_trace_attributes(record),
+        )
+        for index, record in enumerate(tool_records)
+    )
+    budget_payload = _budget_trace_payload(budget_snapshot)
+    budget_failed = isinstance(error, BudgetExceeded)
+    events.extend(
+        (
+            AgentTraceEvent(
+                sequence=len(events),
+                run_replay_id=request_digest,
+                kind="budget",
+                status="rejected" if budget_failed else "succeeded",
+                name="run-budget",
+                output_sha256=_digest_trace_payload(budget_payload),
+                failure_code=failure_code if budget_failed else None,
+                attributes=budget_payload,
+            ),
+            AgentTraceEvent(
+                sequence=len(events) + 1,
+                run_replay_id=request_digest,
+                kind="error",
+                status="failed",
+                name=f"{phase}-error",
+                failure_code=failure_code,
+            ),
+            AgentTraceEvent(
+                sequence=len(events) + 2,
+                run_replay_id=request_digest,
+                kind="final_status",
+                status="failed",
+                name="failed",
+                failure_code=failure_code,
+            ),
+        )
+    )
+    return RunTrace(run_replay_id=request_digest, events=tuple(events))
 
 
 async def run_evidence_request(
@@ -295,69 +481,101 @@ async def run_evidence_request(
     *,
     model: Any,
     tool_services: AgentToolServices | None = None,
+    trace_collector: RunTraceCollector | None = None,
 ) -> VisualResponse:
     """Run one bounded image-plus-question request and return a safe response."""
 
-    _validate_image_bytes(request, image_bytes)
-    budget = RunBudget(request.limits)
-    budget.consume_image_bytes(len(image_bytes))
     request_digest = _digest_request(request, image_bytes)
-    executor = (
-        BoundedToolExecutor(
-            budget=budget,
-            image_tools=tool_services.image_tools,
-            reference_retriever=tool_services.reference_retriever,
-            run_sha256=request_digest,
-            allowed_image_ids=frozenset({request.image.image_id}),
-        )
-        if tool_services is not None
-        else None
-    )
-    agent = create_agent(model, enable_tools=executor is not None)
-    cost_limit = (
-        None
-        if getattr(model, "system", None) in {"test", "function"}
-        else Decimal(str(request.limits.max_estimated_cost_usd))
-    )
+    budget = RunBudget(request.limits)
+    executor: BoundedToolExecutor | None = None
+    phase = "input"
     try:
-        async with asyncio.timeout(budget.remaining_seconds()):
-            result = await agent.run(
-                _prompt_parts(request, image_bytes),
-                deps=executor,
-                usage_limits=UsageLimits(
-                    request_limit=request.limits.max_model_requests,
-                    tool_calls_limit=request.limits.max_tool_calls,
-                    output_tokens_limit=request.limits.max_output_tokens,
-                    cost_limit=cost_limit,
-                ),
+        _validate_image_bytes(request, image_bytes)
+        budget.consume_image_bytes(len(image_bytes))
+        executor = (
+            BoundedToolExecutor(
+                budget=budget,
+                image_tools=tool_services.image_tools,
+                reference_retriever=tool_services.reference_retriever,
+                run_sha256=request_digest,
+                allowed_image_ids=frozenset({request.image.image_id}),
             )
-    except TimeoutError:
-        raise BudgetExceeded("timeout") from None
-    usage = result.usage
-    if usage.requests:
-        budget.consume_model_requests(usage.requests)
-    if usage.tool_calls and executor is None:
-        budget.consume_tool_calls(usage.tool_calls)
-    if usage.output_tokens:
-        budget.consume_output_tokens(usage.output_tokens)
-    if usage.cost:
-        budget.consume_estimated_cost(usage.cost)
-    response = VisualResponse.model_validate(result.output.model_dump(mode="json"))
-    tool_records = executor.records if executor is not None else ()
-    authorized_retrieval_results = (
-        executor.authorized_retrieval_results if executor is not None else ()
-    )
-    response = _validate_provenance(
-        request,
-        response,
-        tool_records,
-        authorized_retrieval_results,
-    )
-    return _with_runtime_trace(
-        response,
-        request_digest=request_digest,
-        model_name=result.response.model_name or "unknown-model",
-        provider_name=result.response.provider_name or "unknown-provider",
-        model_requests=result.usage.requests,
-        tool_records=tool_records,
-    )
+            if tool_services is not None
+            else None
+        )
+        agent = create_agent(
+            _BudgetedModel(model, budget),
+            enable_tools=executor is not None,
+        )
+        cost_limit = (
+            None
+            if getattr(model, "system", None) in {"test", "function"}
+            else Decimal(str(request.limits.max_estimated_cost_usd))
+        )
+        phase = "model_request"
+        try:
+            async with asyncio.timeout(budget.remaining_seconds()):
+                result = await agent.run(
+                    _prompt_parts(request, image_bytes),
+                    deps=executor,
+                    usage_limits=UsageLimits(
+                        request_limit=request.limits.max_model_requests,
+                        tool_calls_limit=request.limits.max_tool_calls,
+                        output_tokens_limit=request.limits.max_output_tokens,
+                        cost_limit=cost_limit,
+                    ),
+                )
+        except TimeoutError:
+            raise BudgetExceeded("timeout") from None
+        usage = result.usage
+        if usage.requests != budget.snapshot().model_requests:
+            raise BudgetExceeded("invalid_usage")
+        if usage.tool_calls and executor is None:
+            budget.consume_tool_calls(usage.tool_calls)
+        if usage.output_tokens:
+            budget.consume_output_tokens(usage.output_tokens)
+        if usage.cost:
+            budget.consume_estimated_cost(usage.cost)
+        phase = "verification"
+        response = VisualResponse.model_validate(result.output.model_dump(mode="json"))
+        tool_records = executor.records if executor is not None else ()
+        authorized_retrieval_results = (
+            executor.authorized_retrieval_results if executor is not None else ()
+        )
+        response = _validate_provenance(
+            request,
+            response,
+            tool_records,
+            authorized_retrieval_results,
+        )
+        response = _with_runtime_trace(
+            response,
+            request_digest=request_digest,
+            model_name=result.response.model_name or "unknown-model",
+            provider_name=result.response.provider_name or "unknown-provider",
+            model_requests=result.usage.requests,
+            budget_snapshot=budget.snapshot(),
+            tool_records=tool_records,
+        )
+    except Exception as error:
+        tool_records = executor.records if executor is not None else ()
+        if trace_collector is not None:
+            trace_collector.record(
+                _failure_runtime_trace(
+                    request_digest=request_digest,
+                    budget_snapshot=budget.snapshot(),
+                    error=error,
+                    phase=phase,
+                    tool_records=tool_records,
+                )
+            )
+        raise
+
+    if trace_collector is not None:
+        trace_collector.record(
+            RunTrace(
+                run_replay_id=request_digest,
+                events=tuple(response.trace),
+            )
+        )
+    return response

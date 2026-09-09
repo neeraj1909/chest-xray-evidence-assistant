@@ -5,6 +5,7 @@ from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
 import pytest
+from pydantic_ai.exceptions import ModelAPIError
 
 from chest_xray_evidence_assistant.baselines import load_baseline_case
 from chest_xray_evidence_assistant.models import VisualResponse
@@ -103,7 +104,7 @@ def test_smoke_orchestrates_one_image_request_without_leaking_payloads(
         "provider": "ollama",
         "source_evidence_count": 0,
         "status": "answered",
-        "trace_events": 1,
+        "trace_events": 0,
         "visual_evidence_count": 1,
     }
 
@@ -134,3 +135,32 @@ def test_smoke_runtime_errors_are_redacted(
     payload = output_payload(capsys)
     assert payload == {"status": "failed", "error_code": "live_RuntimeError"}
     assert "secret payload" not in json.dumps(payload)
+
+
+def test_smoke_model_api_failure_has_a_stable_unavailable_code(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    config = LiveModelConfig(
+        provider="ollama",
+        model="fixture-model",
+        base_url="http://localhost:11434/v1",
+    )
+    monkeypatch.setenv("CXR_LIVE_SMOKE", "1")
+    monkeypatch.setattr(
+        live_smoke.LiveModelConfig,
+        "from_env",
+        classmethod(lambda cls: config),
+    )
+    monkeypatch.setattr(live_smoke, "build_live_model", lambda value: "model")
+
+    async def fail(*args: object, **kwargs: object) -> VisualResponse:
+        raise ModelAPIError("fixture-model", "authorization=must-not-render")
+
+    monkeypatch.setattr(live_smoke, "run_evidence_request", fail)
+
+    assert live_smoke.main() == 1
+    assert output_payload(capsys) == {
+        "status": "failed",
+        "error_code": "live_model_unavailable",
+    }

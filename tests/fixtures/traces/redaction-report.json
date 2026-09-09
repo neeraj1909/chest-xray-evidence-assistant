@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "trace_count": 2,
+  "event_count": 12,
+  "event_kinds": [
+    "abstention",
+    "budget",
+    "error",
+    "final_status",
+    "model_request",
+    "retrieval",
+    "run",
+    "tool_call",
+    "verification"
+  ],
+  "trace_sha256": "fb9cfeab97e0283597a627f47ca2cb67823a11f8b49165a6444a6b059e98bf27",
+  "probes": [
+    {
+      "name": "api_key",
+      "value_sha256": "9203648e508696c0558a6b031a36055741664ac6bb430789040506105ba616f5",
+      "representations_checked": 1
+    },
+    {
+      "name": "image_bytes",
+      "value_sha256": "472df3c18e13ab1cef9b1c8f0b227dd55901e1b3900f97ff3a525572a8a988ed",
+      "representations_checked": 2
+    },
+    {
+      "name": "patient_email",
+      "value_sha256": "46585948dd0fba96dbeb25072af0497936d43223af33784f450ed0673bbf322a",
+      "representations_checked": 1
+    },
+    {
+      "name": "raw_prompt",
+      "value_sha256": "aa7572d78559fd51dfaaea7be93c3858a85550ed0e5be46588ebe69b30f59590",
+      "representations_checked": 1
+    }
+  ],
+  "violations": [],
+  "passed": true
+}

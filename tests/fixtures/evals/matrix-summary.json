@@ -2,10 +2,11 @@
   "case_count": 120,
   "comparison": {
     "case_set_sha256": "2533676778b031f884a174c2588ec1e489578b5a2f267302370eafa293e86bbf",
+    "corpus_sha256": "9bad3f69b220d4863a79e33ba38c876c1174fea8b7c8a9d57334acf0a057c651",
     "dataset_sha256": "df59d8b75aa7432eaca062b22921575893729a0778b544f81b51d768b390d45c",
     "limits_sha256": "ce73ba16eec8eedac7e3406eacaea351c8a440a115eed1fe35281191a4d52aaa",
     "prompt_set_sha256": "00fc940a603b3ea70749584ee22debac47c7bb066f151d7dd6ad7b2ba1c054c2",
-    "response_schema_sha256": "d7cd1b7e9a480d53c33f22f54180c937964c743e9be78fc11bbb11c591c9d011",
+    "response_schema_sha256": "20d9cfed227084a82da1a11274878b127902b43d306307794a1480acec721e7f",
     "retrieval_index_sha256": "9b47bd59c25cc1e832a27753c0e0d36649cb833031d454cd3812cb9619a27719",
     "rubric_sha256": "85a42bf75b6cfc79dfdbfba379209c42f7038d1a1cb7048390e095eab9e8b4eb",
     "seed_set_sha256": "2cc252148ac072923f7c6898b68e6187f04b74c7f3cbf349308e6f39dadb6728"
@@ -58,14 +59,15 @@
         "unsupported_claim_rate": 0.0
       },
       "agent_report_path": "agent/text_only.json",
-      "agent_report_sha256": "b6ee45b5266468f139651b7472ed36541214663f027b701ea28a6b07322203c4",
+      "agent_report_sha256": "0ef6036fabd4fb3abb24b10e1243d83cb9c155c651f056a71d736ea091380f5b",
+      "artifact_manifest_sha256": "ed007c3a69cc5ab1013acb297a46647313f0eb70731a4d32af204ec55eb5a530",
       "configuration_id": "text_only",
-      "configuration_sha256": "e5b5040b386687ff3f74673932c1999944ec42e2d782b7d19f1803df1225ae85",
+      "configuration_sha256": "04aca291aa8f03d3e0e46a4cbae6f4715ffa0180e6f0b758151e460c141d35c0",
       "context_precision_mean": 0.0,
       "context_recall_mean": 0.0,
       "provenance_accuracy": 0.0,
       "retrieval_report_path": "retrieval/text_only.json",
-      "retrieval_report_sha256": "d7fc9994c50e0a4b3a650a6cbddf7fbea84d79e8031e83cd19e24a84765a00ca"
+      "retrieval_report_sha256": "1080b20a3ec11af4cc7890dce16df234def578f1bf3a3f142f13e47496e7728a"
     },
     {
       "agent_metrics": {
@@ -114,14 +116,15 @@
         "unsupported_claim_rate": 0.0
       },
       "agent_report_path": "agent/one_shot_vlm.json",
-      "agent_report_sha256": "33744f65055d89c07c76575a64a3beb857b6059ef1dce182a66c7a0229946a03",
+      "agent_report_sha256": "f2269bbe794357ca79c53646bae97c284493a911e8f4a3a18b8810ff3ae1c0ff",
+      "artifact_manifest_sha256": "5d32989eb97bc83dfa02c35d2f5951ec2409bb4c95515c3b659388d4799f2b79",
       "configuration_id": "one_shot_vlm",
-      "configuration_sha256": "0a729b73e79e99b6095838d6347e81519102ed1d93d6cf00e83613fcdcbcc16b",
+      "configuration_sha256": "582bc21064b1a0afabbd0fa5603a49e4aae578917ddac530ecaebfb2d148e15b",
       "context_precision_mean": 0.0,
       "context_recall_mean": 0.0,
       "provenance_accuracy": 0.0,
       "retrieval_report_path": "retrieval/one_shot_vlm.json",
-      "retrieval_report_sha256": "8547b88be807fcb743ac86b0ab8b4f78f773a10cff609750bccccf86537b9545"
+      "retrieval_report_sha256": "e775d3ffa1cfd0e131dc5ffd2570ea600f94f29ea5699a4fb96e5e3a1c6b14fd"
     },
     {
       "agent_metrics": {
@@ -170,14 +173,15 @@
         "unsupported_claim_rate": 0.0
       },
       "agent_report_path": "agent/vlm_tools.json",
-      "agent_report_sha256": "e8397b0575b81a16fccef702279de77eccc746220bb6148289e5dac29b145c58",
+      "agent_report_sha256": "21801d906818a460b910f8f7fd433d7ba6b91b088abcd56411831cf5578085a8",
+      "artifact_manifest_sha256": "0357de034f3b5f58568fbd52a963ba1d95b3913772c1a66af9c3cfd6a1b9a1d5",
       "configuration_id": "vlm_tools",
-      "configuration_sha256": "635eead1eeda34d07b34ddb5d2b3aa8cefa583571d8fd8811bf92058a679eb8e",
+      "configuration_sha256": "1be617d96118e9f4b1d4b0380ebc40393b8bd148b4aafabc0828d815e8b02be0",
       "context_precision_mean": 0.0,
       "context_recall_mean": 0.0,
       "provenance_accuracy": 0.0,
       "retrieval_report_path": "retrieval/vlm_tools.json",
-      "retrieval_report_sha256": "8106ae19dd67220d75f222981ebcc266bab16f39ede621aae46881ba4db8c2f1"
+      "retrieval_report_sha256": "3dc6c068c260cddcd1a5304024035e7ca97ba90cb079dbda1ab7ed0cd1b95c54"
     },
     {
       "agent_metrics": {
@@ -226,14 +230,15 @@
         "unsupported_claim_rate": 0.0
       },
       "agent_report_path": "agent/vlm_rag.json",
-      "agent_report_sha256": "575ec68453f661dfb39d09bf0bfaae7d9de24193be1c3768e196f997af9a38ef",
+      "agent_report_sha256": "9a72ce590cb069b1b79cef5858ddf796ceeb91150a3dcbb3230adbc703dc4d1d",
+      "artifact_manifest_sha256": "e0d7453823cdb4c8dbe8cbe838d82a2e154526d3ecd35dc17b98f46352b8a06c",
       "configuration_id": "vlm_rag",
-      "configuration_sha256": "804462e3efda5d4c2d7dc05ab3b053049f62f4bd6f13724f324a67e055dca0d8",
+      "configuration_sha256": "acc8189df70a39b0cbd8d0416f5852c36eb8aaba3a3a375d284c90315f41100c",
       "context_precision_mean": 1.0,
       "context_recall_mean": 1.0,
       "provenance_accuracy": 1.0,
       "retrieval_report_path": "retrieval/vlm_rag.json",
-      "retrieval_report_sha256": "ecd8a7eb2aea11aa505682bca453bfb7db3dfa911a0e4c8802cc5eec0adcdda9"
+      "retrieval_report_sha256": "56e8948498e39409d6ae076856eddbd90d0c15912ee81bf0e78422031aa03b8f"
     },
     {
       "agent_metrics": {
@@ -282,18 +287,21 @@
         "unsupported_claim_rate": 0.0
       },
       "agent_report_path": "agent/full_agent.json",
-      "agent_report_sha256": "563cc9ea0d3bed8d2ff32871d4b6feced6de1d06e3149ecff720939cfb2aafd9",
+      "agent_report_sha256": "e42a4461ab417a0e92528145a16426d5ac49e3182ee4aa7a650b10f98af4bda0",
+      "artifact_manifest_sha256": "982ee2b7b40ecce0d15d7921387742daa9fb7b813c0b45cfff6297190cad5b42",
       "configuration_id": "full_agent",
-      "configuration_sha256": "fca3a0ea8a26de9ccd30a9427476ec457df1cff36db5e2698f522024c9a22697",
+      "configuration_sha256": "663dbb3f0f67d35fb085d3aad09ef9d257ef84c27bd20dc1de549910af4685b6",
       "context_precision_mean": 1.0,
       "context_recall_mean": 1.0,
       "provenance_accuracy": 1.0,
       "retrieval_report_path": "retrieval/full_agent.json",
-      "retrieval_report_sha256": "48e7cab91e982a66da4ac10d7bba3c60ed7b6ee3363b28bd32fce21feb246cd4"
+      "retrieval_report_sha256": "62a5be92e6390d29c43fe60598c6c1e2564a1f0a6cf9440011fb0380cd973be9"
     }
   ],
   "dataset_id": "cxr-agent-bench-v0",
   "dataset_version": "v0",
+  "evaluation_manifest_path": "evaluation-manifest.json",
+  "evaluation_manifest_sha256": "04be7ad48c68fe4e07398d98376ed896646305333737acdb4abc3f1d67f53370",
   "exit_gate": {
     "comparison_inputs_identical": true,
     "full_agent_beats_one_shot_on_tool_required": true,

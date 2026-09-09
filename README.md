@@ -121,13 +121,19 @@ Implemented:
 - deterministic graders plus Pydantic Evals reports for answers, evidence,
   tools, trajectories, budgets, and safety;
 - retrieval-only RAGAS ID precision/recall with an independent deterministic
-  safety gate; and
-- a repeatable five-configuration offline ablation matrix.
+  safety gate;
+- a repeatable five-configuration offline ablation matrix;
+- structured redacted success and failure traces with one replay identity;
+- self-validating evaluation manifests that bind provider, model, prompt,
+  corpus, configuration, schema, and framework versions;
+- a non-root, read-only Docker/Compose fake-model deployment with a real HTTP
+  upload-and-submit smoke;
+- deterministic p50/p95 latency, request, tool, token, cost, and budget samples;
+  and
+- one-attempt safe degradation for unavailable model, image-tool, and retrieval
+  dependencies, with stable redacted failure codes.
 
-Planned:
-
-- additional hardening and observability;
-- Docker deployment and end-to-end smoke validation.
+Planned: evidence-backed expansion decisions for optional later capabilities.
 
 ## Safety scope
 
@@ -194,6 +200,27 @@ Open `http://127.0.0.1:7860`, upload one of the exact PNG files from
 `data/fixtures/images/`, keep the displayed synthetic-demo question, confirm
 that the file contains no patient data, and run the check. Any unregistered
 image fails closed. Use `--port <1024-65535>` to select another local port.
+
+### Docker offline demo
+
+Build and start the same credential-free fake-model UI, run its complete HTTP
+upload and queued-submit smoke inside the container, then stop it cleanly:
+
+```bash
+docker compose config --quiet
+docker compose up --build --wait
+docker compose exec -T ui /app/.venv/bin/python \
+  -m chest_xray_evidence_assistant.ui_smoke --timeout 30
+docker compose down --timeout 10
+```
+
+Compose publishes only `127.0.0.1:7860` by default. Set `CXR_UI_PORT` to a
+different local port before startup if needed. The runtime image uses pinned
+multi-platform base digests, UID/GID 10001, a read-only root filesystem,
+dropped Linux capabilities, and a bounded temporary filesystem for uploads.
+It contains only the three bundled synthetic fixtures; it has no live-provider
+credentials or patient data. The live-provider smoke below remains a separate,
+explicit opt-in path and is not enabled by Compose.
 
 The baseline command writes a deterministic, fingerprinted, no-tool fake-model
 artifact under `artifacts/baselines/`. It uses the same synthetic image and

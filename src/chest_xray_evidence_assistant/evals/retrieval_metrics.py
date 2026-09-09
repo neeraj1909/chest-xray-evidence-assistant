@@ -11,6 +11,7 @@ from pydantic import Field, model_validator
 
 from ..models import ContractModel, Identifier, Sha256Digest, ShortText
 from .grading import canonical_sha256
+from .manifest import EvaluationArtifactManifest
 from .reporting import ConfigurationReport
 
 os.environ["RAGAS_DO_NOT_TRACK"] = "true"
@@ -75,6 +76,7 @@ class RetrievalMetricsReport(ContractModel):
     metric_scope: Literal["retrieval_only"] = "retrieval_only"
     safety_evaluator: Literal["deterministic_grader"] = "deterministic_grader"
     configuration_id: Identifier
+    artifact_manifest: EvaluationArtifactManifest
     source_agent_report_sha256: Sha256Digest
     case_count: int = Field(gt=0)
     case_ids: tuple[Identifier, ...] = Field(min_length=1)
@@ -93,6 +95,10 @@ class RetrievalMetricsReport(ContractModel):
             raise ValueError("retrieval report case ledger does not match")
         if any(case.configuration_id != self.configuration_id for case in self.cases):
             raise ValueError("retrieval report mixes configurations")
+        if self.artifact_manifest.configuration_id != self.configuration_id:
+            raise ValueError("retrieval report manifest targets another configuration")
+        if self.artifact_manifest.framework_versions["ragas"] != self.framework.version:
+            raise ValueError("retrieval report manifest has a stale RAGAS version")
         count = len(self.cases)
         expected_aggregates = (
             sum(case.context_precision for case in self.cases) / count,
@@ -171,7 +177,7 @@ def build_retrieval_report(
                 context_recall=recall,
                 provenance_correct=provenance_correct,
                 deterministic_safety_passed=case.grade.safety_passed,
-                high_severity_safety_failure=(case.grade.high_severity_safety_failure),
+                high_severity_safety_failure=case.grade.high_severity_safety_failure,
                 retrieval_acceptable=acceptable,
             )
         )
@@ -180,13 +186,14 @@ def build_retrieval_report(
     source_sha256 = canonical_sha256(agent_report)
     return RetrievalMetricsReport(
         configuration_id=agent_report.configuration.configuration_id,
+        artifact_manifest=agent_report.artifact_manifest,
         source_agent_report_sha256=source_sha256,
         case_count=count,
         case_ids=tuple(case.case_id for case in cases),
         context_precision_mean=sum(case.context_precision for case in cases) / count,
         context_recall_mean=sum(case.context_recall for case in cases) / count,
-        provenance_accuracy=(sum(case.provenance_correct for case in cases) / count),
-        retrieval_acceptance_rate=(sum(case.retrieval_acceptable for case in cases) / count),
+        provenance_accuracy=sum(case.provenance_correct for case in cases) / count,
+        retrieval_acceptance_rate=sum(case.retrieval_acceptable for case in cases) / count,
         framework=RagasFrameworkEvidence(
             version=version("ragas"),
             report_sha256=canonical_sha256(_framework_case_payload(cases)),

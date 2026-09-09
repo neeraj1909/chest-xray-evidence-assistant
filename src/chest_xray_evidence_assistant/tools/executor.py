@@ -13,7 +13,7 @@ from pydantic import BaseModel
 
 from ..models import Sha256Digest, TraceValue
 from ..retrieval.records import ScoredChunk
-from ..runtime import BudgetExceeded, BudgetSnapshot, RunBudget
+from ..runtime import BudgetExceeded, BudgetSnapshot, DependencyUnavailable, RunBudget
 from .contracts import (
     CropImageCall,
     CropImageResult,
@@ -30,11 +30,12 @@ from .ports import ImageToolsPort, ReferenceRetrievalPort
 from .registry import INITIAL_TOOL_REGISTRY, ToolRegistry
 
 ToolExecutionFailureCode: TypeAlias = Literal[
+    "image_tool_unavailable",
     "image_not_authorized",
     "invalid_tool_result",
     "replay_mismatch",
+    "retrieval_unavailable",
     "tool_execution_failed",
-    "tool_unavailable",
 ]
 ToolResult: TypeAlias = CropImageResult | ImageMetadataResult | tuple[ScoredChunk, ...]
 
@@ -127,6 +128,14 @@ def _record_name(name: str, call: ToolCall | None) -> ToolRecordName:
     if name in INITIAL_TOOL_REGISTRY.names:
         return cast(ToolRecordName, name)
     return "unrecognized"
+
+
+def _dependency_failure_code(call: ToolCall | None) -> ToolExecutionFailureCode:
+    if isinstance(call, RetrieveReferenceCall):
+        return "retrieval_unavailable"
+    if isinstance(call, CropImageCall | GetImageMetadataCall):
+        return "image_tool_unavailable"
+    return "tool_execution_failed"
 
 
 def _replay_id(
@@ -230,7 +239,7 @@ class BoundedToolExecutor:
                 raise ToolExecutionRejected("image_not_authorized")
             return await self._image_tools.get_image_metadata(call.arguments)
         if self._reference_retriever is None:
-            raise ToolExecutionRejected("tool_unavailable")
+            raise ToolExecutionRejected("retrieval_unavailable")
         results = await self._reference_retriever.retrieve_reference(call.arguments)
         if (
             not isinstance(results, tuple)
@@ -291,6 +300,18 @@ class BoundedToolExecutor:
                 budget_before=budget_before,
             )
             raise
+        except DependencyUnavailable:
+            error = ToolExecutionRejected(_dependency_failure_code(call))
+            self._append_record(
+                requested_name=name,
+                call=call,
+                arguments_sha256=arguments_sha256,
+                result=None,
+                failure_code=error.code,
+                status="failed",
+                budget_before=budget_before,
+            )
+            raise error from None
         except Exception:
             error = ToolExecutionRejected("tool_execution_failed")
             self._append_record(

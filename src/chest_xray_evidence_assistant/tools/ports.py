@@ -17,7 +17,7 @@ from .contracts import (
 @runtime_checkable
 class CropImagePort(Protocol):
     async def crop_image(self, arguments: CropImageArguments) -> CropImageResult:
-        """Create a server-owned crop and return only its safe metadata."""
+        """Create a crop, raising DependencyUnavailable for an adapter outage."""
 
 
 @runtime_checkable
@@ -26,7 +26,7 @@ class ImageMetadataPort(Protocol):
         self,
         arguments: GetImageMetadataArguments,
     ) -> ImageMetadataResult:
-        """Return verified metadata for one server-owned image."""
+        """Return metadata, raising DependencyUnavailable for an adapter outage."""
 
 
 @runtime_checkable
@@ -40,4 +40,4 @@ class ReferenceRetrievalPort(Protocol):
         self,
         arguments: RetrieveReferenceArguments,
     ) -> tuple[ScoredChunk, ...]:
-        """Return a bounded set of provenance-bearing reference records."""
+        """Return records, raising DependencyUnavailable for an adapter outage."""
