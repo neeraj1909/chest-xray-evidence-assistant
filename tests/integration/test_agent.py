@@ -26,12 +26,19 @@ from chest_xray_evidence_assistant.models import (
     RunLimits,
     VisualResponse,
 )
+from chest_xray_evidence_assistant.retrieval import (
+    InMemoryBM25Index,
+    LexicalReferenceService,
+    ScoredChunk,
+    load_reference_corpus,
+)
 from chest_xray_evidence_assistant.runtime import BudgetExceeded
 from chest_xray_evidence_assistant.tools import FixtureImageTools
 
 models.ALLOW_MODEL_REQUESTS = False
 
-FIXTURE_ROOT = Path(__file__).resolve().parents[2] / "data" / "fixtures"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+FIXTURE_ROOT = REPO_ROOT / "data" / "fixtures"
 RESPONSE_ROOT = Path(__file__).resolve().parents[1] / "fixtures" / "responses"
 
 
@@ -90,6 +97,18 @@ def exact_tool_model(
         )
 
     return FunctionModel(respond, model_name="exact-tool-model"), observed_tools
+
+
+def source_evidence_payload(result: ScoredChunk) -> dict[str, object]:
+    chunk = result.chunk
+    return {
+        "document_id": chunk.document_id,
+        "section": chunk.source_span.section,
+        "source_url": str(chunk.source_span.source_url),
+        "locator": chunk.source_span.locator,
+        "excerpt": chunk.text,
+        "relevance_score": 0.8,
+    }
 
 
 def test_agent_requires_explicit_model_injection() -> None:
@@ -270,3 +289,61 @@ def test_tool_required_path_beats_the_zero_tool_path_on_expected_trajectory() ->
 
     assert tool_required_score(one_shot) == 0
     assert tool_required_score(tool_run) == 1
+
+
+def test_retrieved_source_evidence_requires_the_authorized_result_and_trace() -> None:
+    request, image_bytes = fixture_request()
+    lexical_index = InMemoryBM25Index.from_corpus(
+        load_reference_corpus(REPO_ROOT / "data" / "references" / "manifest.json")
+    )
+    service = LexicalReferenceService(lexical_index)
+    query = "computed tomography slices"
+    expected = lexical_index.search(query, top_k=1)[0]
+    final_payload = response_payload("answered.json")
+    final_payload["source_evidence"] = [source_evidence_payload(expected)]
+    model, _ = exact_tool_model(
+        "retrieve_reference",
+        {"query": query, "top_k": 1},
+        final_payload,
+    )
+
+    response = asyncio.run(
+        run_evidence_request(
+            request,
+            image_bytes,
+            model=model,
+            tool_services=AgentToolServices(
+                image_tools=FixtureImageTools.from_manifest(FIXTURE_ROOT / "manifest.json"),
+                reference_retriever=service,
+            ),
+        )
+    )
+
+    assert response.source_evidence[0].document_id == expected.chunk.document_id
+    assert any(
+        event.kind == "tool" and event.name == "retrieve_reference" and event.status == "succeeded"
+        for event in response.trace
+    )
+    retrieval_event = next(event for event in response.trace if event.name == "retrieve_reference")
+    assert retrieval_event.attributes["result_count"] == 1
+    assert len(str(retrieval_event.attributes["chunk_ids_sha256"])) == 64
+
+
+def test_fabricated_source_evidence_is_rejected_without_retrieval() -> None:
+    request, image_bytes = fixture_request()
+    lexical_index = InMemoryBM25Index.from_corpus(
+        load_reference_corpus(REPO_ROOT / "data" / "references" / "manifest.json")
+    )
+    fabricated = response_payload("answered.json")
+    fabricated["source_evidence"] = [
+        source_evidence_payload(lexical_index.search("radiography", top_k=1)[0])
+    ]
+
+    with pytest.raises(ValueError, match="authorized retrieval result"):
+        asyncio.run(
+            run_evidence_request(
+                request,
+                image_bytes,
+                model=TestModel(custom_output_args=fabricated),
+            )
+        )

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
-from ..models import SourceEvidence
+from ..retrieval.records import ScoredChunk
 from .contracts import (
     CropImageArguments,
     CropImageResult,
@@ -39,5 +39,5 @@ class ReferenceRetrievalPort(Protocol):
     async def retrieve_reference(
         self,
         arguments: RetrieveReferenceArguments,
-    ) -> tuple[SourceEvidence, ...]:
+    ) -> tuple[ScoredChunk, ...]:
         """Return a bounded set of provenance-bearing reference records."""

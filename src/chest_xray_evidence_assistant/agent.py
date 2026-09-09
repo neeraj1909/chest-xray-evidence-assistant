@@ -16,10 +16,10 @@ from .models import (
     EvidenceRequest,
     Identifier,
     NormalizedBoundingBox,
-    SourceEvidence,
     TraceValue,
     VisualResponse,
 )
+from .retrieval.records import ScoredChunk
 from .runtime import BudgetExceeded, RunBudget
 from .tools import (
     BoundedToolExecutor,
@@ -88,7 +88,7 @@ async def retrieve_reference(
     context: RunContext[BoundedToolExecutor],
     query: ReferenceQuery,
     top_k: ReferenceTopK = 5,
-) -> tuple[SourceEvidence, ...]:
+) -> tuple[ScoredChunk, ...]:
     """Retrieve at most five provenance-bearing public reference records."""
 
     try:
@@ -151,6 +151,7 @@ def _validate_provenance(
     request: EvidenceRequest,
     response: VisualResponse,
     tool_records: tuple[ToolCallRecord, ...],
+    authorized_retrieval_results: tuple[ScoredChunk, ...],
 ) -> VisualResponse:
     allowed_image_ids = {request.image.image_id}
     allowed_image_ids.update(
@@ -161,6 +162,21 @@ def _validate_provenance(
     for evidence in response.visual_evidence:
         if evidence.locator.image_id not in allowed_image_ids:
             raise ValueError("visual evidence references an image outside the request")
+    has_retrieval_trace = any(
+        record.name == "retrieve_reference" and record.status == "succeeded"
+        for record in tool_records
+    )
+    for evidence in response.source_evidence:
+        is_authorized = any(
+            evidence.document_id == result.chunk.document_id
+            and evidence.section == result.chunk.source_span.section
+            and evidence.source_url == result.chunk.source_span.source_url
+            and evidence.locator == result.chunk.source_span.locator
+            and evidence.excerpt in result.chunk.text
+            for result in authorized_retrieval_results
+        )
+        if not has_retrieval_trace or not is_authorized:
+            raise ValueError("source evidence is not present in an authorized retrieval result")
     return response
 
 
@@ -185,6 +201,9 @@ def _tool_trace_attributes(record: ToolCallRecord) -> dict[str, TraceValue]:
     }
     projection_names = {
         "output_sha256": "artifact_sha256",
+        "chunk_ids_sha256": "chunk_ids_sha256",
+        "document_ids_sha256": "document_ids_sha256",
+        "result_count": "result_count",
         "width_px": "width_px",
         "height_px": "height_px",
     }
@@ -321,7 +340,15 @@ async def run_evidence_request(
         budget.consume_estimated_cost(usage.cost)
     response = VisualResponse.model_validate(result.output.model_dump(mode="json"))
     tool_records = executor.records if executor is not None else ()
-    response = _validate_provenance(request, response, tool_records)
+    authorized_retrieval_results = (
+        executor.authorized_retrieval_results if executor is not None else ()
+    )
+    response = _validate_provenance(
+        request,
+        response,
+        tool_records,
+        authorized_retrieval_results,
+    )
     return _with_runtime_trace(
         response,
         request_digest=request_digest,

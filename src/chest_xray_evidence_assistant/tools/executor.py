@@ -11,7 +11,8 @@ from typing import Any, Literal, TypeAlias, cast
 
 from pydantic import BaseModel
 
-from ..models import Sha256Digest, SourceEvidence, TraceValue
+from ..models import Sha256Digest, TraceValue
+from ..retrieval.records import ScoredChunk
 from ..runtime import BudgetExceeded, BudgetSnapshot, RunBudget
 from .contracts import (
     CropImageCall,
@@ -30,11 +31,12 @@ from .registry import INITIAL_TOOL_REGISTRY, ToolRegistry
 
 ToolExecutionFailureCode: TypeAlias = Literal[
     "image_not_authorized",
+    "invalid_tool_result",
     "replay_mismatch",
     "tool_execution_failed",
     "tool_unavailable",
 ]
-ToolResult: TypeAlias = CropImageResult | ImageMetadataResult | tuple[SourceEvidence, ...]
+ToolResult: TypeAlias = CropImageResult | ImageMetadataResult | tuple[ScoredChunk, ...]
 
 
 class ToolExecutionRejected(RuntimeError):
@@ -110,9 +112,11 @@ def _safe_result(result: ToolResult) -> dict[str, TraceValue]:
             "height_px": result.image.height_px,
             "byte_size": result.image.byte_size,
         }
-    document_ids = [item.document_id for item in result]
+    chunk_ids = [item.chunk.chunk_id for item in result]
+    document_ids = [item.chunk.document_id for item in result]
     return {
         "result_count": len(result),
+        "chunk_ids_sha256": _digest(chunk_ids),
         "document_ids_sha256": _digest(document_ids),
     }
 
@@ -169,10 +173,15 @@ class BoundedToolExecutor:
         self._run_sha256 = run_sha256
         self._allowed_image_ids = set(allowed_image_ids)
         self._records: list[ToolCallRecord] = []
+        self._authorized_retrieval_results: dict[str, ScoredChunk] = {}
 
     @property
     def records(self) -> tuple[ToolCallRecord, ...]:
         return tuple(self._records)
+
+    @property
+    def authorized_retrieval_results(self) -> tuple[ScoredChunk, ...]:
+        return tuple(self._authorized_retrieval_results.values())
 
     def _append_record(
         self,
@@ -222,7 +231,26 @@ class BoundedToolExecutor:
             return await self._image_tools.get_image_metadata(call.arguments)
         if self._reference_retriever is None:
             raise ToolExecutionRejected("tool_unavailable")
-        return await self._reference_retriever.retrieve_reference(call.arguments)
+        results = await self._reference_retriever.retrieve_reference(call.arguments)
+        if (
+            not isinstance(results, tuple)
+            or len(results) > call.arguments.top_k
+            or any(not isinstance(result, ScoredChunk) for result in results)
+        ):
+            raise ToolExecutionRejected("invalid_tool_result")
+        chunk_ids = [result.chunk.chunk_id for result in results]
+        expected_query_sha256 = hashlib.sha256(call.arguments.query.encode("utf-8")).hexdigest()
+        if (
+            len(chunk_ids) != len(set(chunk_ids))
+            or [result.rank for result in results] != list(range(1, len(results) + 1))
+            or any(result.query_sha256 != expected_query_sha256 for result in results)
+            or len({result.index_fingerprint for result in results}) > 1
+        ):
+            raise ToolExecutionRejected("invalid_tool_result")
+        self._authorized_retrieval_results.update(
+            (result.chunk.chunk_id, result) for result in results
+        )
+        return results
 
     async def execute(self, name: str, arguments: Mapping[str, object]) -> ToolResult:
         """Validate, charge, dispatch, and record one tool attempt."""

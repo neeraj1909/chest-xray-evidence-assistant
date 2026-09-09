@@ -72,9 +72,11 @@ The request flow is:
 The current code implements the contracts, deterministic fixtures, provider-
 neutral model port, bounded fake-model agent, opt-in OpenAI/Ollama model
 factory, fingerprinted one-shot baseline, and the three-tool execution boundary.
-Crop and metadata adapters work against server-owned image IDs; reference
-retrieval remains unavailable until its provenance-preserving corpus is added.
-A cost-bearing live call remains explicitly opt-in.
+Crop and metadata adapters work against server-owned image IDs. Reference
+retrieval uses a manifest-verified, license-cleared local corpus and a
+deterministic in-memory BM25 index; final source evidence must match an exact
+authorized retrieval result. A cost-bearing live call remains explicitly
+opt-in.
 
 ## Contracts
 
@@ -105,13 +107,16 @@ Implemented:
 - an environment-only, opt-in OpenAI/Ollama provider factory and smoke path;
 - a repeatable, fingerprinted one-shot/no-tool baseline capture;
 - deterministic crop and metadata adapters for verified grayscale PNG fixtures;
+- immutable, content-addressed reference records and an auditable local corpus;
+- deterministic BM25 retrieval with an adapter seam for later dense or hybrid
+  indexes;
+- source-evidence authorization against exact retrieved chunks;
 - parent-owned request, tool, image, output, timeout, repair, and cost budgets;
   and
 - a three-name allow-listed dispatcher with redacted, replayable tool records.
 
 Planned:
 
-- provenance-preserving retrieval;
 - deterministic safety verification;
 - a minimal local UI; and
 - benchmark, evaluation, and Docker smoke workflows.

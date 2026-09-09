@@ -1,0 +1,107 @@
+{
+  "asset": {
+    "accessed_on": "2026-09-10",
+    "asset_id": "asset-79293c23886dcdf9299f9f5a4c79d5841465f062",
+    "byte_size": 35,
+    "contains_patient_data": false,
+    "content_sha256": "79293c23886dcdf9299f9f5a4c79d5841465f0627bd4ced15b9d5ceb77afb077",
+    "license_name": "Synthetic test fixture license",
+    "license_status": "license_cleared",
+    "license_url": null,
+    "media_type": "text/plain",
+    "publisher": "Example publisher",
+    "source_url": "https://example.org/public-reference.txt",
+    "title": "Synthetic public reference"
+  },
+  "chunk": {
+    "asset_id": "asset-79293c23886dcdf9299f9f5a4c79d5841465f062",
+    "chunk_id": "chunk-7dad9c3ee1a13565999ff43c07a458ef5faa5347",
+    "document_id": "document-a78b219deac6ff57175cd2c5a2adeb2a0a313f2b",
+    "extractor_fingerprint": "bb41bf5d07b7ed9be88763f4cb2581545150d77dc2f9ac86e8ce4d1a7cefd7b3",
+    "ordinal": 0,
+    "rendition_sha256": "8dc23ea63d5f5d3531871608c2524e52331e99be9c0be448694f205b59818576",
+    "source_span": {
+      "document_id": "document-a78b219deac6ff57175cd2c5a2adeb2a0a313f2b",
+      "end_char": 45,
+      "locator": "lines 2-2",
+      "section": "Acquisition quality",
+      "source_url": "https://example.org/public-reference.txt",
+      "start_char": 20
+    },
+    "text": "Synthetic reference text.",
+    "text_sha256": "ea45d9cb5ffd298ca9582b730396ab062ecb4723d3d69333a38bf38577f4ea0b"
+  },
+  "citation": {
+    "citation_id": "citation-0bdd23838d8778ccc14bc9eed33795abc4ad2737",
+    "end_char": 9,
+    "excerpt": "Synthetic",
+    "excerpt_sha256": "4a85827ad80e8635fb4a2b41a3fce1d0f23ba1eb27db0aa84113a7b0ca415d42",
+    "scored_chunk": {
+      "canonical_relevance": 1.75,
+      "chunk": {
+        "asset_id": "asset-79293c23886dcdf9299f9f5a4c79d5841465f062",
+        "chunk_id": "chunk-7dad9c3ee1a13565999ff43c07a458ef5faa5347",
+        "document_id": "document-a78b219deac6ff57175cd2c5a2adeb2a0a313f2b",
+        "extractor_fingerprint": "bb41bf5d07b7ed9be88763f4cb2581545150d77dc2f9ac86e8ce4d1a7cefd7b3",
+        "ordinal": 0,
+        "rendition_sha256": "8dc23ea63d5f5d3531871608c2524e52331e99be9c0be448694f205b59818576",
+        "source_span": {
+          "document_id": "document-a78b219deac6ff57175cd2c5a2adeb2a0a313f2b",
+          "end_char": 45,
+          "locator": "lines 2-2",
+          "section": "Acquisition quality",
+          "source_url": "https://example.org/public-reference.txt",
+          "start_char": 20
+        },
+        "text": "Synthetic reference text.",
+        "text_sha256": "ea45d9cb5ffd298ca9582b730396ab062ecb4723d3d69333a38bf38577f4ea0b"
+      },
+      "higher_is_better": true,
+      "index_fingerprint": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "query_sha256": "509563cb56e8c5e77aae23992164355faebe7fc52998c1d0bd144bcd7649bf0b",
+      "rank": 1,
+      "raw_score": 1.75,
+      "score_conversion": "identity",
+      "score_kind": "bm25"
+    },
+    "start_char": 0
+  },
+  "document": {
+    "asset_id": "asset-79293c23886dcdf9299f9f5a4c79d5841465f062",
+    "document_id": "document-a78b219deac6ff57175cd2c5a2adeb2a0a313f2b",
+    "extractor_fingerprint": "bb41bf5d07b7ed9be88763f4cb2581545150d77dc2f9ac86e8ce4d1a7cefd7b3",
+    "extractor_name": "plain-text-extractor",
+    "extractor_version": "v1",
+    "language": "en",
+    "rendition_sha256": "8dc23ea63d5f5d3531871608c2524e52331e99be9c0be448694f205b59818576",
+    "title": "Synthetic public reference"
+  },
+  "scored_chunk": {
+    "canonical_relevance": 1.75,
+    "chunk": {
+      "asset_id": "asset-79293c23886dcdf9299f9f5a4c79d5841465f062",
+      "chunk_id": "chunk-7dad9c3ee1a13565999ff43c07a458ef5faa5347",
+      "document_id": "document-a78b219deac6ff57175cd2c5a2adeb2a0a313f2b",
+      "extractor_fingerprint": "bb41bf5d07b7ed9be88763f4cb2581545150d77dc2f9ac86e8ce4d1a7cefd7b3",
+      "ordinal": 0,
+      "rendition_sha256": "8dc23ea63d5f5d3531871608c2524e52331e99be9c0be448694f205b59818576",
+      "source_span": {
+        "document_id": "document-a78b219deac6ff57175cd2c5a2adeb2a0a313f2b",
+        "end_char": 45,
+        "locator": "lines 2-2",
+        "section": "Acquisition quality",
+        "source_url": "https://example.org/public-reference.txt",
+        "start_char": 20
+      },
+      "text": "Synthetic reference text.",
+      "text_sha256": "ea45d9cb5ffd298ca9582b730396ab062ecb4723d3d69333a38bf38577f4ea0b"
+    },
+    "higher_is_better": true,
+    "index_fingerprint": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "query_sha256": "509563cb56e8c5e77aae23992164355faebe7fc52998c1d0bd144bcd7649bf0b",
+    "rank": 1,
+    "raw_score": 1.75,
+    "score_conversion": "identity",
+    "score_kind": "bm25"
+  }
+}

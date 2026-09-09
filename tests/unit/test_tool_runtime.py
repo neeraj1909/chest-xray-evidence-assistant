@@ -7,7 +7,12 @@ from pathlib import Path
 
 import pytest
 
-from chest_xray_evidence_assistant.models import RunLimits, SourceEvidence
+from chest_xray_evidence_assistant.models import RunLimits
+from chest_xray_evidence_assistant.retrieval import (
+    InMemoryBM25Index,
+    LexicalReferenceService,
+    load_reference_corpus,
+)
 from chest_xray_evidence_assistant.runtime import BudgetExceeded, RunBudget
 from chest_xray_evidence_assistant.tools import (
     BoundedToolExecutor,
@@ -19,22 +24,9 @@ from chest_xray_evidence_assistant.tools import (
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_PATH = REPO_ROOT / "data" / "fixtures" / "manifest.json"
+REFERENCE_MANIFEST_PATH = REPO_ROOT / "data" / "references" / "manifest.json"
 TRACE_FIXTURE = REPO_ROOT / "tests" / "fixtures" / "traces" / "tool-trajectory.json"
 RUN_SHA256 = "a" * 64
-
-
-class StaticRetriever:
-    async def retrieve_reference(self, arguments: object) -> tuple[SourceEvidence, ...]:
-        return (
-            SourceEvidence(
-                document_id="public-reference-1",
-                section="Acquisition quality",
-                source_url="https://example.org/reference",
-                locator="section-1",
-                excerpt="Public reference text for a synthetic retrieval test.",
-                relevance_score=0.75,
-            ),
-        )
 
 
 def make_executor(
@@ -136,14 +128,17 @@ def test_image_tool_cannot_cross_the_run_authorization_boundary() -> None:
 
 
 def test_retrieval_projection_hashes_query_and_result_without_retaining_text() -> None:
-    executor = make_executor(retriever=StaticRetriever())
+    retriever = LexicalReferenceService(
+        InMemoryBM25Index.from_corpus(load_reference_corpus(REFERENCE_MANIFEST_PATH))
+    )
+    executor = make_executor(retriever=retriever)
     sensitive_query = "private patient phrase must not survive"
 
     result = asyncio.run(
         executor.execute("retrieve_reference", {"query": sensitive_query, "top_k": 1})
     )
 
-    assert result[0].document_id == "public-reference-1"
+    assert result[0].chunk.document_id.startswith("document-")
     serialized = executor.records[0].model_dump_json()
     assert sensitive_query not in serialized
     assert executor.records[0].safe_arguments["top_k"] == 1

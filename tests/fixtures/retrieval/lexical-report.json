@@ -1,0 +1,20 @@
+{
+  "index_fingerprint": "9b47bd59c25cc1e832a27753c0e0d36649cb833031d454cd3812cb9619a27719",
+  "matches": [
+    {
+      "asset_id": "asset-74a006aea47bd91c34d354bb10d09819984ffb34",
+      "canonical_relevance": 4.401695737171567,
+      "chunk_id": "chunk-fdc552cde5b1b1f5fa79482ecebf20e80a305ec8",
+      "document_id": "document-fd432b509fdac679f636647525fd2b470704fbb3",
+      "locator": "What is Computed Tomography? > Conventional X-ray Images; Computed Tomography (CT) (accessed 2026-09-10; manually paraphrased)",
+      "rank": 1,
+      "raw_score": 4.401695737171567,
+      "score_conversion": "identity",
+      "score_kind": "bm25",
+      "source_url": "https://www.fda.gov/radiation-emitting-products/medical-x-ray-imaging/what-computed-tomography"
+    }
+  ],
+  "query_sha256": "e791d120eefc31726dc613345b73f34182d7790afaf63ed9b4da719041255248",
+  "schema_version": 1,
+  "top_k": 3
+}

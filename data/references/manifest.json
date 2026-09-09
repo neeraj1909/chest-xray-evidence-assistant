@@ -1,0 +1,112 @@
+{
+  "chunking": {
+    "fingerprint": "6576656a6d65de4e679faecbf4d07e4018c99457a05c89e07439a4c991c0626f",
+    "locator_type": "character_span",
+    "max_chars": 16000,
+    "strategy": "source_section"
+  },
+  "corpus_fingerprint": "9bad3f69b220d4863a79e33ba38c876c1174fea8b7c8a9d57334acf0a057c651",
+  "corpus_id": "cxr-reference-corpus",
+  "corpus_version": "v1",
+  "document_family": "text",
+  "extractor": {
+    "fingerprint": "9d4d42b89dd1398cbdd32fe18ad1631db94df21a0049814794a2275bd998dcaf",
+    "method": "manual_curated_markdown",
+    "name": "manual-curated-markdown",
+    "version": "v1"
+  },
+  "logical_index": "sparse",
+  "schema_version": 1,
+  "sources": [
+    {
+      "asset": {
+        "accessed_on": "2026-09-10",
+        "asset_id": "asset-ceb85167d08ede756609e353dff14f463bb0cbc4",
+        "byte_size": 317,
+        "contains_patient_data": false,
+        "content_sha256": "ceb85167d08ede756609e353dff14f463bb0cbc401c8c0c5b9833d137a50ee0a",
+        "license_name": "Project-authored paraphrase of FDA public-domain website text",
+        "license_status": "license_cleared",
+        "license_url": "https://www.fda.gov/about-fda/about-website/website-policies",
+        "media_type": "text/markdown",
+        "publisher": "U.S. Food and Drug Administration",
+        "source_url": "https://www.fda.gov/radiation-emitting-products/medical-x-ray-imaging/radiography",
+        "title": "Static radiography and image formation"
+      },
+      "document": {
+        "asset_id": "asset-ceb85167d08ede756609e353dff14f463bb0cbc4",
+        "document_id": "document-8855062b512c5f967e61bb6cb68e64e9801ebea8",
+        "extractor_fingerprint": "9d4d42b89dd1398cbdd32fe18ad1631db94df21a0049814794a2275bd998dcaf",
+        "extractor_name": "manual-curated-markdown",
+        "extractor_version": "v1",
+        "language": "en",
+        "rendition_sha256": "ceb85167d08ede756609e353dff14f463bb0cbc401c8c0c5b9833d137a50ee0a",
+        "title": "Static radiography and image formation"
+      },
+      "path": "documents/radiography-formation.md",
+      "section": "Radiography: Description",
+      "source_locator": "Radiography > Description (accessed 2026-09-10; manually paraphrased)",
+      "transformation": "manual_paraphrase"
+    },
+    {
+      "asset": {
+        "accessed_on": "2026-09-10",
+        "asset_id": "asset-74a006aea47bd91c34d354bb10d09819984ffb34",
+        "byte_size": 297,
+        "contains_patient_data": false,
+        "content_sha256": "74a006aea47bd91c34d354bb10d09819984ffb347c4e8769e9dbb28489177615",
+        "license_name": "Project-authored paraphrase of FDA public-domain website text",
+        "license_status": "license_cleared",
+        "license_url": "https://www.fda.gov/about-fda/about-website/website-policies",
+        "media_type": "text/markdown",
+        "publisher": "U.S. Food and Drug Administration",
+        "source_url": "https://www.fda.gov/radiation-emitting-products/medical-x-ray-imaging/what-computed-tomography",
+        "title": "Projection images and CT slices"
+      },
+      "document": {
+        "asset_id": "asset-74a006aea47bd91c34d354bb10d09819984ffb34",
+        "document_id": "document-fd432b509fdac679f636647525fd2b470704fbb3",
+        "extractor_fingerprint": "9d4d42b89dd1398cbdd32fe18ad1631db94df21a0049814794a2275bd998dcaf",
+        "extractor_name": "manual-curated-markdown",
+        "extractor_version": "v1",
+        "language": "en",
+        "rendition_sha256": "74a006aea47bd91c34d354bb10d09819984ffb347c4e8769e9dbb28489177615",
+        "title": "Projection images and CT slices"
+      },
+      "path": "documents/projection-vs-ct.md",
+      "section": "Conventional X-ray Images and Computed Tomography (CT)",
+      "source_locator": "What is Computed Tomography? > Conventional X-ray Images; Computed Tomography (CT) (accessed 2026-09-10; manually paraphrased)",
+      "transformation": "manual_paraphrase"
+    },
+    {
+      "asset": {
+        "accessed_on": "2026-09-10",
+        "asset_id": "asset-2584f58f84826962432372fe2851e20ccadc8a6f",
+        "byte_size": 287,
+        "contains_patient_data": false,
+        "content_sha256": "2584f58f84826962432372fe2851e20ccadc8a6f42c5b635f098962598ca5150",
+        "license_name": "Project-authored paraphrase of FDA public-domain website text",
+        "license_status": "license_cleared",
+        "license_url": "https://www.fda.gov/about-fda/about-website/website-policies",
+        "media_type": "text/markdown",
+        "publisher": "U.S. Food and Drug Administration",
+        "source_url": "https://www.fda.gov/radiation-emitting-products/medical-imaging/medical-x-ray-imaging",
+        "title": "Purpose and radiation context"
+      },
+      "document": {
+        "asset_id": "asset-2584f58f84826962432372fe2851e20ccadc8a6f",
+        "document_id": "document-03e7e41779242bd02e31da7563a0f74757dab33e",
+        "extractor_fingerprint": "9d4d42b89dd1398cbdd32fe18ad1631db94df21a0049814794a2275bd998dcaf",
+        "extractor_name": "manual-curated-markdown",
+        "extractor_version": "v1",
+        "language": "en",
+        "rendition_sha256": "2584f58f84826962432372fe2851e20ccadc8a6f42c5b635f098962598ca5150",
+        "title": "Purpose and radiation context"
+      },
+      "path": "documents/radiation-purpose.md",
+      "section": "Description, Benefits - Risks, and Principles of radiation protection",
+      "source_locator": "Medical X-ray Imaging > Description; Benefits - Risks; Principles of radiation protection (accessed 2026-09-10; manually paraphrased)",
+      "transformation": "manual_paraphrase"
+    }
+  ]
+}
