@@ -1,0 +1,73 @@
+{
+  "records": [
+    {
+      "arguments_sha256": "9cd94465256911a08552551e110df0233216a9517affba60c16263a98ff6d124",
+      "budget_after": {
+        "elapsed_ms": 0,
+        "estimated_cost_usd": "0",
+        "image_bytes": 0,
+        "model_requests": 0,
+        "output_tokens": 0,
+        "repairs": 0,
+        "tool_calls": 1
+      },
+      "budget_before": {
+        "elapsed_ms": 0,
+        "estimated_cost_usd": "0",
+        "image_bytes": 0,
+        "model_requests": 0,
+        "output_tokens": 0,
+        "repairs": 0,
+        "tool_calls": 0
+      },
+      "failure_code": null,
+      "name": "get_image_metadata",
+      "replay_id": "fe51b5ef373079b5139d974832c527fec3dc628932cf6f51d0820b8984164cab",
+      "result_sha256": "9b3e00d47e8e1a306ac8fb25f01e14c5418217bd7ca68bcc114d2723ffe8de3e",
+      "safe_arguments": {
+        "image_id": "synthetic-full-frame"
+      },
+      "safe_result": {
+        "byte_size": 634,
+        "height_px": 64,
+        "image_id": "synthetic-full-frame",
+        "input_sha256": "947f75b530cc73ca3c4aad7be5ccaebe46bb936c0c73706baae589c2f211e358",
+        "output_sha256": "57bfad9d32b14bc0b37717caefda49d3308c66f4467f02d4351c4f60a07f3f90",
+        "width_px": 64
+      },
+      "schema_version": 1,
+      "sequence": 0,
+      "status": "succeeded"
+    },
+    {
+      "arguments_sha256": "9ff06769a77e34d9abdec362019487c910da38f575d20623397ed9bf90b4fbb9",
+      "budget_after": {
+        "elapsed_ms": 0,
+        "estimated_cost_usd": "0",
+        "image_bytes": 0,
+        "model_requests": 0,
+        "output_tokens": 0,
+        "repairs": 0,
+        "tool_calls": 2
+      },
+      "budget_before": {
+        "elapsed_ms": 0,
+        "estimated_cost_usd": "0",
+        "image_bytes": 0,
+        "model_requests": 0,
+        "output_tokens": 0,
+        "repairs": 0,
+        "tool_calls": 1
+      },
+      "failure_code": "unknown_tool",
+      "name": "unrecognized",
+      "replay_id": "d865919fb4e8e3ab888491fa55a499d758258872e829488fa94a9473b8007a17",
+      "result_sha256": null,
+      "safe_arguments": {},
+      "safe_result": {},
+      "schema_version": 1,
+      "sequence": 1,
+      "status": "rejected"
+    }
+  ]
+}

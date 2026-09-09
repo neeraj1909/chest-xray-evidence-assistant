@@ -14,9 +14,12 @@ from .models import (
     VisualEvidence,
     VisualResponse,
 )
+from .runtime import BudgetExceeded, BudgetSnapshot, RunBudget, ToolBudgetScope
 
 __all__ = [
     "AgentTraceEvent",
+    "BudgetExceeded",
+    "BudgetSnapshot",
     "ContractModel",
     "DeterministicModelAdapter",
     "EvidenceRequest",
@@ -26,7 +29,9 @@ __all__ = [
     "ModelAdapter",
     "QuestionContext",
     "RunLimits",
+    "RunBudget",
     "SourceEvidence",
+    "ToolBudgetScope",
     "VisualEvidence",
     "VisualResponse",
 ]

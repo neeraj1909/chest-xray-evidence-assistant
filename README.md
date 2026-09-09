@@ -69,11 +69,12 @@ The request flow is:
    limits before returning a `VisualResponse`.
 7. Store only redacted trace metadata for evaluation and reproducibility.
 
-The current code implements the contract, deterministic fixture, provider-
-neutral model-port, bounded fake-model agent, opt-in OpenAI/Ollama model
-factory, and fingerprinted one-shot baseline. A cost-bearing live call remains
-explicitly opt-in. Tools, retrieval, verification, UI, and deployment remain
-incremental slices.
+The current code implements the contracts, deterministic fixtures, provider-
+neutral model port, bounded fake-model agent, opt-in OpenAI/Ollama model
+factory, fingerprinted one-shot baseline, and the three-tool execution boundary.
+Crop and metadata adapters work against server-owned image IDs; reference
+retrieval remains unavailable until its provenance-preserving corpus is added.
+A cost-bearing live call remains explicitly opt-in.
 
 ## Contracts
 
@@ -102,12 +103,14 @@ Implemented:
 - a provider-neutral model adapter;
 - a bounded Pydantic AI path exercised with a deterministic fake model;
 - an environment-only, opt-in OpenAI/Ollama provider factory and smoke path;
+- a repeatable, fingerprinted one-shot/no-tool baseline capture;
+- deterministic crop and metadata adapters for verified grayscale PNG fixtures;
+- parent-owned request, tool, image, output, timeout, repair, and cost budgets;
   and
-- a repeatable, fingerprinted one-shot/no-tool baseline capture.
+- a three-name allow-listed dispatcher with redacted, replayable tool records.
 
 Planned:
 
-- the three bounded tools;
 - provenance-preserving retrieval;
 - deterministic safety verification;
 - a minimal local UI; and

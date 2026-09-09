@@ -1,4 +1,5 @@
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -43,6 +44,27 @@ def test_manifest_rejects_oversized_assets() -> None:
 
     with pytest.raises(ValidationError):
         FixtureManifest.model_validate(raw)
+
+
+def test_size_mismatch_is_rejected_before_fixture_content_is_read(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fixture_root = tmp_path / "fixtures"
+    shutil.copytree(MANIFEST_PATH.parent, fixture_root)
+    candidate = fixture_root / "images" / "synthetic-full-frame.png"
+    candidate.write_bytes(candidate.read_bytes() + b"unexpected")
+    original_read_bytes = Path.read_bytes
+
+    def reject_candidate_read(path: Path) -> bytes:
+        if path == candidate:
+            raise AssertionError("mismatched fixture content must not be read")
+        return original_read_bytes(path)
+
+    monkeypatch.setattr(Path, "read_bytes", reject_candidate_read)
+
+    with pytest.raises(ValueError, match="byte size mismatch"):
+        load_fixture_manifest(fixture_root / "manifest.json")
 
 
 @pytest.mark.parametrize(

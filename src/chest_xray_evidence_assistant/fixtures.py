@@ -74,7 +74,10 @@ def _verify_file(manifest_path: Path, fixture: FixtureRecord) -> None:
     if not candidate.is_file():
         raise ValueError(f"fixture file does not exist: {fixture.path}")
 
-    content = candidate.read_bytes()
+    if candidate.stat().st_size != fixture.asset.byte_size:
+        raise ValueError(f"fixture byte size mismatch: {fixture.path}")
+    with candidate.open("rb") as fixture_file:
+        content = fixture_file.read(fixture.asset.byte_size + 1)
     if len(content) != fixture.asset.byte_size:
         raise ValueError(f"fixture byte size mismatch: {fixture.path}")
     if hashlib.sha256(content).hexdigest() != fixture.asset.sha256:
