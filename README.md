@@ -71,7 +71,8 @@ The request flow is:
 
 The current code implements the contracts, deterministic fixtures, provider-
 neutral model port, bounded fake-model agent, opt-in OpenAI/Ollama model
-factory, fingerprinted one-shot baseline, and the three-tool execution boundary.
+factory, fingerprinted one-shot baseline, three-tool execution boundary, and
+owned offline benchmark.
 Crop and metadata adapters work against server-owned image IDs. Reference
 retrieval uses a manifest-verified, license-cleared local corpus and a
 deterministic in-memory BM25 index; final source evidence must match an exact
@@ -113,14 +114,20 @@ Implemented:
 - source-evidence authorization against exact retrieved chunks;
 - parent-owned request, tool, image, output, timeout, repair, and cost budgets;
 - a three-name allow-listed dispatcher with redacted, replayable tool records;
-  and
 - a local-only Gradio demo with fixture attestation, safe fallback states, and
-  redacted evidence and execution details.
+  redacted evidence and execution details;
+- `CXR-AgentBench-v0`: 40 byte-attested synthetic images and 120 prompts with
+  image-level development, validation, and test splits;
+- deterministic graders plus Pydantic Evals reports for answers, evidence,
+  tools, trajectories, budgets, and safety;
+- retrieval-only RAGAS ID precision/recall with an independent deterministic
+  safety gate; and
+- a repeatable five-configuration offline ablation matrix.
 
 Planned:
 
-- deterministic safety verification;
-- benchmark, evaluation, and Docker smoke workflows.
+- additional hardening and observability;
+- Docker deployment and end-to-end smoke validation.
 
 ## Safety scope
 
@@ -137,12 +144,43 @@ uv run --group dev pytest tests/unit tests/safety
 uv run --group dev --group agent pytest tests/integration
 uv run --group dev --group agent pytest -q
 uv run --group dev --group agent --group live pytest -q
+RAGAS_DO_NOT_TRACK=true uv run --group dev --group eval pytest tests/evals -q
 uv run --group dev ruff format --check .
 uv run --group dev ruff check .
 uv run --group dev python -m compileall -q src tests scripts
 uv run --group dev python scripts/generate_fixtures.py
 uv run --group agent python scripts/capture_baseline.py
 ```
+
+### Offline benchmark
+
+Regenerate and verify the owned benchmark, then run the complete matrix:
+
+```bash
+uv run python scripts/generate_benchmark.py
+RAGAS_DO_NOT_TRACK=true uv run --group eval python \
+  -m chest_xray_evidence_assistant.evals.run_benchmark \
+  --dataset data/benchmark/cxr-agent-bench-v0.jsonl \
+  --output artifacts/evaluation/latest
+```
+
+The matrix compares text-only, one-shot vision, vision plus metadata tools,
+vision plus retrieval, and the full bounded capability set on identical cases,
+prompts, seeds, limits, and rubrics. Pydantic Evals handles agent behavior;
+RAGAS runs only ID-based context precision and recall on retrieval cases and
+cannot override the deterministic safety result.
+
+This default runner is a scripted offline harness, not a live VLM evaluation.
+Its token and latency fields are explicitly labeled deterministic estimates;
+its scores establish evaluator, provenance, and ablation wiring, not clinical
+accuracy, provider quality, real latency, or cost. Reports are written beneath
+`artifacts/evaluation/`; the committed summary fixture detects unexplained
+metric or fingerprint drift.
+
+The evaluation group pins RAGAS 0.3.9 and LangChain Community 0.3.x because
+[RAGAS 0.4.3 has a confirmed top-level import defect with current LangChain
+Community](https://github.com/vibrantlabsai/ragas/issues/2745). Telemetry is
+disabled before RAGAS is imported.
 
 ### Local offline demo
 

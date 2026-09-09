@@ -18,7 +18,7 @@ from .contracts import (
     ToolName,
 )
 from .executor import BoundedToolExecutor, ToolExecutionRejected, ToolResult
-from .image_tools import FixtureImageTools
+from .image_tools import FixtureImageTools, decode_grayscale_png
 from .ports import CropImagePort, ImageMetadataPort, ImageToolsPort, ReferenceRetrievalPort
 from .registry import INITIAL_TOOL_REGISTRY, ToolRegistry
 
@@ -36,6 +36,7 @@ __all__ = [
     "ImageMetadataResult",
     "ImageToolRejected",
     "ImageToolsPort",
+    "decode_grayscale_png",
     "ReferenceRetrievalPort",
     "ReferenceQuery",
     "ReferenceTopK",

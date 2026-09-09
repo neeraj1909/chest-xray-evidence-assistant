@@ -1,0 +1,792 @@
+{
+  "category_counts": {
+    "abstention": 24,
+    "contradiction": 24,
+    "observation": 24,
+    "retrieval": 24,
+    "tool_use": 24
+  },
+  "dataset_id": "cxr-agent-bench-v0",
+  "dataset_path": "cxr-agent-bench-v0.jsonl",
+  "dataset_sha256": "df59d8b75aa7432eaca062b22921575893729a0778b544f81b51d768b390d45c",
+  "dataset_version": "v0",
+  "generated_by": "scripts/generate_benchmark.py",
+  "image_count": 40,
+  "images": [
+    {
+      "asset": {
+        "byte_size": 207,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-000",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "1642bfae1db183c212c71f6390cb102da753fd7b39a2cd94bc72799bb90ea7a3",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for observation evaluation.",
+      "image_case_id": "cxr-bench-000",
+      "path": "images/cxr-bench-000.png",
+      "source_group_id": "synthetic-source-000",
+      "split": "development"
+    },
+    {
+      "asset": {
+        "byte_size": 146,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-001",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "2de3edc3a7f0aa409f79d32a8c0a7ce500f0afe706235baabe482c1a919fff91",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for tool_use evaluation.",
+      "image_case_id": "cxr-bench-001",
+      "path": "images/cxr-bench-001.png",
+      "source_group_id": "synthetic-source-001",
+      "split": "development"
+    },
+    {
+      "asset": {
+        "byte_size": 185,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-002",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "4446838e16f56c7848c484ec280344e764829c2ee87e093e9ba8e21d1f205a1e",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for retrieval evaluation.",
+      "image_case_id": "cxr-bench-002",
+      "path": "images/cxr-bench-002.png",
+      "source_group_id": "synthetic-source-002",
+      "split": "development"
+    },
+    {
+      "asset": {
+        "byte_size": 155,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-003",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "cf6c55289b8ae7b2c014a09fc5afc04fd788cbf58ae2d97b0e06ed0bdd5b4961",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for contradiction evaluation.",
+      "image_case_id": "cxr-bench-003",
+      "path": "images/cxr-bench-003.png",
+      "source_group_id": "synthetic-source-003",
+      "split": "development"
+    },
+    {
+      "asset": {
+        "byte_size": 135,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-004",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "ed85562c58e431400e86c091229cf8cad0e25b8bb5ff9ce04898ae2c7ed46e2c",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for abstention evaluation.",
+      "image_case_id": "cxr-bench-004",
+      "path": "images/cxr-bench-004.png",
+      "source_group_id": "synthetic-source-004",
+      "split": "development"
+    },
+    {
+      "asset": {
+        "byte_size": 207,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-005",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "2c1bed6d54c5c3f0715ed3ccfabf7642c328438c2f6bc053d83f63f07b380ec9",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for observation evaluation.",
+      "image_case_id": "cxr-bench-005",
+      "path": "images/cxr-bench-005.png",
+      "source_group_id": "synthetic-source-005",
+      "split": "development"
+    },
+    {
+      "asset": {
+        "byte_size": 146,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-006",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "913effc84197e2b838ab1d693ba1f93acd3b2b02cdc637666fce21c8b24676f2",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for tool_use evaluation.",
+      "image_case_id": "cxr-bench-006",
+      "path": "images/cxr-bench-006.png",
+      "source_group_id": "synthetic-source-006",
+      "split": "development"
+    },
+    {
+      "asset": {
+        "byte_size": 187,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-007",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "76d914215a4d06d5995ea04b843ceb1938fa381b4657c70e491371bfe35351f2",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for retrieval evaluation.",
+      "image_case_id": "cxr-bench-007",
+      "path": "images/cxr-bench-007.png",
+      "source_group_id": "synthetic-source-007",
+      "split": "development"
+    },
+    {
+      "asset": {
+        "byte_size": 155,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-008",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "249b33558e44438b61cff0bc806c5f8f674da800e35e6b6d26bbd9572ec0a5a8",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for contradiction evaluation.",
+      "image_case_id": "cxr-bench-008",
+      "path": "images/cxr-bench-008.png",
+      "source_group_id": "synthetic-source-008",
+      "split": "development"
+    },
+    {
+      "asset": {
+        "byte_size": 135,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-009",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "0aa02df16bfc361a130c393481e47d94df5bbfc25a7000f6edb3be5774fcb881",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for abstention evaluation.",
+      "image_case_id": "cxr-bench-009",
+      "path": "images/cxr-bench-009.png",
+      "source_group_id": "synthetic-source-009",
+      "split": "development"
+    },
+    {
+      "asset": {
+        "byte_size": 207,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-010",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "037161f2fa4764f641f42f453ca0e1230fc8655ae3c1f674103b754d0a6ae81e",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for observation evaluation.",
+      "image_case_id": "cxr-bench-010",
+      "path": "images/cxr-bench-010.png",
+      "source_group_id": "synthetic-source-010",
+      "split": "development"
+    },
+    {
+      "asset": {
+        "byte_size": 146,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-011",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "e22451ea4b032070f9725b2b448a042346487e334e6554e87976ff7c0c414af8",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for tool_use evaluation.",
+      "image_case_id": "cxr-bench-011",
+      "path": "images/cxr-bench-011.png",
+      "source_group_id": "synthetic-source-011",
+      "split": "development"
+    },
+    {
+      "asset": {
+        "byte_size": 185,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-012",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "aace9de53ab5b3de2538d26df6a11d7b224244a31ea38710ac7a4732947bea64",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for retrieval evaluation.",
+      "image_case_id": "cxr-bench-012",
+      "path": "images/cxr-bench-012.png",
+      "source_group_id": "synthetic-source-012",
+      "split": "development"
+    },
+    {
+      "asset": {
+        "byte_size": 155,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-013",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "79998120c2e8ad07e2a33f9123be1845c96183c994666f908226891dff796621",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for contradiction evaluation.",
+      "image_case_id": "cxr-bench-013",
+      "path": "images/cxr-bench-013.png",
+      "source_group_id": "synthetic-source-013",
+      "split": "development"
+    },
+    {
+      "asset": {
+        "byte_size": 135,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-014",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "155725ea93a4dc144209730194ea70e58f1e4bb8f872461a3bc12ab702a84c0f",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for abstention evaluation.",
+      "image_case_id": "cxr-bench-014",
+      "path": "images/cxr-bench-014.png",
+      "source_group_id": "synthetic-source-014",
+      "split": "development"
+    },
+    {
+      "asset": {
+        "byte_size": 207,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-015",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "1946ce4909436807db725afb1b54d0a02dded061f8bfbb3a066749dbb4d277a9",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for observation evaluation.",
+      "image_case_id": "cxr-bench-015",
+      "path": "images/cxr-bench-015.png",
+      "source_group_id": "synthetic-source-015",
+      "split": "development"
+    },
+    {
+      "asset": {
+        "byte_size": 146,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-016",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "c18c37d02c5d6894c052344c6b9b1a30c6c0ccc93f09bea747a241f8d7665ef7",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for tool_use evaluation.",
+      "image_case_id": "cxr-bench-016",
+      "path": "images/cxr-bench-016.png",
+      "source_group_id": "synthetic-source-016",
+      "split": "development"
+    },
+    {
+      "asset": {
+        "byte_size": 185,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-017",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "1f3f07f6c56e0888a11912f7aade416fb4f941fe1aea532e750859692a8fb6ca",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for retrieval evaluation.",
+      "image_case_id": "cxr-bench-017",
+      "path": "images/cxr-bench-017.png",
+      "source_group_id": "synthetic-source-017",
+      "split": "development"
+    },
+    {
+      "asset": {
+        "byte_size": 155,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-018",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "09c224a0341289f001eac4dd42c2bddb042373e2e7fc4ef0732e05cbe6acbc40",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for contradiction evaluation.",
+      "image_case_id": "cxr-bench-018",
+      "path": "images/cxr-bench-018.png",
+      "source_group_id": "synthetic-source-018",
+      "split": "development"
+    },
+    {
+      "asset": {
+        "byte_size": 135,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-019",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "0f8d12ba65633180bfe11a76730d86dbcc6506098709e6f9e95d029393352b79",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for abstention evaluation.",
+      "image_case_id": "cxr-bench-019",
+      "path": "images/cxr-bench-019.png",
+      "source_group_id": "synthetic-source-019",
+      "split": "development"
+    },
+    {
+      "asset": {
+        "byte_size": 207,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-020",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "fdd5a2f8b47db16e38d5059d4a1d4965c54bd04fc589772526be56e1d8982367",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for observation evaluation.",
+      "image_case_id": "cxr-bench-020",
+      "path": "images/cxr-bench-020.png",
+      "source_group_id": "synthetic-source-020",
+      "split": "development"
+    },
+    {
+      "asset": {
+        "byte_size": 146,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-021",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "197634b32f90d5df9026114a40405b9e27969bfdef3efb9e87cd074925e03cde",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for tool_use evaluation.",
+      "image_case_id": "cxr-bench-021",
+      "path": "images/cxr-bench-021.png",
+      "source_group_id": "synthetic-source-021",
+      "split": "development"
+    },
+    {
+      "asset": {
+        "byte_size": 186,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-022",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "95b7f050876b43b1b114c55561ef1ba55a724aa434c794ca1940d0720710e77b",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for retrieval evaluation.",
+      "image_case_id": "cxr-bench-022",
+      "path": "images/cxr-bench-022.png",
+      "source_group_id": "synthetic-source-022",
+      "split": "development"
+    },
+    {
+      "asset": {
+        "byte_size": 155,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-023",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "06079144093ca6e541cbf42c72349704c1bd07ae43db93f80747c799d91f7b54",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for contradiction evaluation.",
+      "image_case_id": "cxr-bench-023",
+      "path": "images/cxr-bench-023.png",
+      "source_group_id": "synthetic-source-023",
+      "split": "development"
+    },
+    {
+      "asset": {
+        "byte_size": 135,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-024",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "04ef50f09a8c139282dc81f7f5f72bf4af2f357e5b6bdad8db9ba9bea5f3af8b",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for abstention evaluation.",
+      "image_case_id": "cxr-bench-024",
+      "path": "images/cxr-bench-024.png",
+      "source_group_id": "synthetic-source-024",
+      "split": "validation"
+    },
+    {
+      "asset": {
+        "byte_size": 207,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-025",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "546083f8a4ae6e695a7b7c653e45b88a86ab2d7352c7bb7caa5f647c2b476274",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for observation evaluation.",
+      "image_case_id": "cxr-bench-025",
+      "path": "images/cxr-bench-025.png",
+      "source_group_id": "synthetic-source-025",
+      "split": "validation"
+    },
+    {
+      "asset": {
+        "byte_size": 146,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-026",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "78ca2f0484f1e8a7bf823a07158ce497deee09034b4bff29c283b76a121605b3",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for tool_use evaluation.",
+      "image_case_id": "cxr-bench-026",
+      "path": "images/cxr-bench-026.png",
+      "source_group_id": "synthetic-source-026",
+      "split": "validation"
+    },
+    {
+      "asset": {
+        "byte_size": 185,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-027",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "14ac541fe3f11de261760dfee23cab71367ee89bc03bc6c022dc414cd9ae93bd",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for retrieval evaluation.",
+      "image_case_id": "cxr-bench-027",
+      "path": "images/cxr-bench-027.png",
+      "source_group_id": "synthetic-source-027",
+      "split": "validation"
+    },
+    {
+      "asset": {
+        "byte_size": 155,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-028",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "1e8d96fae92ab3a3de177e9b9b471811571090151436fdeb37d21788961c72da",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for contradiction evaluation.",
+      "image_case_id": "cxr-bench-028",
+      "path": "images/cxr-bench-028.png",
+      "source_group_id": "synthetic-source-028",
+      "split": "validation"
+    },
+    {
+      "asset": {
+        "byte_size": 135,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-029",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "00fb94b0cfb872c63d35ef0f0f77ca56b413fbc07d3c2276960dd130b6b39a64",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for abstention evaluation.",
+      "image_case_id": "cxr-bench-029",
+      "path": "images/cxr-bench-029.png",
+      "source_group_id": "synthetic-source-029",
+      "split": "validation"
+    },
+    {
+      "asset": {
+        "byte_size": 207,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-030",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "c51905a335f01a3e297a9258be66b913b92d71ed1ebdc0ab03f0657043cdb159",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for observation evaluation.",
+      "image_case_id": "cxr-bench-030",
+      "path": "images/cxr-bench-030.png",
+      "source_group_id": "synthetic-source-030",
+      "split": "validation"
+    },
+    {
+      "asset": {
+        "byte_size": 146,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-031",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "ca3421550b52d6f9f6bf40c45cea78dc4ad88ad37ccc2fc7af3e45f20cc1dd0f",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for tool_use evaluation.",
+      "image_case_id": "cxr-bench-031",
+      "path": "images/cxr-bench-031.png",
+      "source_group_id": "synthetic-source-031",
+      "split": "validation"
+    },
+    {
+      "asset": {
+        "byte_size": 186,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-032",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "00a2156c31056345d47f439334c111ad5ceb28a284f8d2052c2573a69efbfcf8",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for retrieval evaluation.",
+      "image_case_id": "cxr-bench-032",
+      "path": "images/cxr-bench-032.png",
+      "source_group_id": "synthetic-source-032",
+      "split": "test"
+    },
+    {
+      "asset": {
+        "byte_size": 155,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-033",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "519b2cbfb4c8c71d32c2cf59e692299737c372afb3f8688cad9cca2237d85edf",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for contradiction evaluation.",
+      "image_case_id": "cxr-bench-033",
+      "path": "images/cxr-bench-033.png",
+      "source_group_id": "synthetic-source-033",
+      "split": "test"
+    },
+    {
+      "asset": {
+        "byte_size": 135,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-034",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "36b58ff2058dbffd4d83b87592b850798a0c45c7161fbb0520c9cbf74b9c22ce",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for abstention evaluation.",
+      "image_case_id": "cxr-bench-034",
+      "path": "images/cxr-bench-034.png",
+      "source_group_id": "synthetic-source-034",
+      "split": "test"
+    },
+    {
+      "asset": {
+        "byte_size": 207,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-035",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "fbbf19ac51aee2323457602b036c887d85ca0c776458233104e8cbd1aedf7d9b",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for observation evaluation.",
+      "image_case_id": "cxr-bench-035",
+      "path": "images/cxr-bench-035.png",
+      "source_group_id": "synthetic-source-035",
+      "split": "test"
+    },
+    {
+      "asset": {
+        "byte_size": 146,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-036",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "98460ef62f21a91aeac71426c58badd24c3695413821ad6d1b7fdbb6832bc64c",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for tool_use evaluation.",
+      "image_case_id": "cxr-bench-036",
+      "path": "images/cxr-bench-036.png",
+      "source_group_id": "synthetic-source-036",
+      "split": "test"
+    },
+    {
+      "asset": {
+        "byte_size": 185,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-037",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "b90123fd640e013d1062c7eb0d103ffbbb95d8cb9a5ef3debfaa26a76f998579",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for retrieval evaluation.",
+      "image_case_id": "cxr-bench-037",
+      "path": "images/cxr-bench-037.png",
+      "source_group_id": "synthetic-source-037",
+      "split": "test"
+    },
+    {
+      "asset": {
+        "byte_size": 155,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-038",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "646ae6610992b17b8d9bf948ed413bb4bc7ae6a63826b125eb87f19ff3a6ae7e",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for contradiction evaluation.",
+      "image_case_id": "cxr-bench-038",
+      "path": "images/cxr-bench-038.png",
+      "source_group_id": "synthetic-source-038",
+      "split": "test"
+    },
+    {
+      "asset": {
+        "byte_size": 135,
+        "contains_phi": false,
+        "height_px": 64,
+        "image_id": "cxr-bench-039",
+        "license_status": "synthetic",
+        "media_type": "image/png",
+        "origin": "Generated locally by scripts/generate_benchmark.py; no patient data.",
+        "origin_url": null,
+        "sha256": "4df7434447cbab99558cc0ed193c76072a8b563def428c93808d899386f56edd",
+        "width_px": 64
+      },
+      "description": "Synthetic non-clinical grayscale fixture for abstention evaluation.",
+      "image_case_id": "cxr-bench-039",
+      "path": "images/cxr-bench-039.png",
+      "source_group_id": "synthetic-source-039",
+      "split": "test"
+    }
+  ],
+  "license_status": "synthetic",
+  "no_patient_data": true,
+  "prompt_count": 120,
+  "schema_version": 1,
+  "seed": 20260910,
+  "split_image_counts": {
+    "development": 24,
+    "test": 8,
+    "validation": 8
+  },
+  "split_prompt_counts": {
+    "development": 72,
+    "test": 24,
+    "validation": 24
+  }
+}

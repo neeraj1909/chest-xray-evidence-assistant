@@ -91,7 +91,8 @@ def _restore_scanline(filtered: bytes, previous: bytes, filter_type: int) -> byt
     return bytes(restored)
 
 
-def _decode_grayscale_png(content: bytes) -> tuple[bytes, ...]:
+def decode_grayscale_png(content: bytes) -> tuple[bytes, ...]:
+    """Decode one bounded, non-interlaced 8-bit grayscale PNG."""
     if not content.startswith(PNG_SIGNATURE):
         raise ImageToolRejected("invalid_image")
 
@@ -241,7 +242,7 @@ class FixtureImageTools:
         if source.asset.media_type != "image/png":
             raise ImageToolRejected("unsupported_media_type")
 
-        rows = _decode_grayscale_png(source.content)
+        rows = decode_grayscale_png(source.content)
         if (len(rows[0]), len(rows)) != (source.asset.width_px, source.asset.height_px):
             raise ImageToolRejected("invalid_image")
         left, top, right, bottom = _pixel_box(
