@@ -230,6 +230,8 @@ def test_tool_enabled_agent_dispatches_through_exact_registry_and_records_trace(
     assert len(tool_events) == 1
     assert tool_events[0].name == "get_image_metadata"
     assert tool_events[0].status == "succeeded"
+    assert tool_events[0].duration_ms is not None
+    assert tool_events[0].duration_ms >= 0
     assert tool_events[0].attributes["tool_calls"] == 1
     assert response.trace[-1].kind == "final"
 

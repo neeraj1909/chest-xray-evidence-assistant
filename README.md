@@ -112,13 +112,14 @@ Implemented:
   indexes;
 - source-evidence authorization against exact retrieved chunks;
 - parent-owned request, tool, image, output, timeout, repair, and cost budgets;
+- a three-name allow-listed dispatcher with redacted, replayable tool records;
   and
-- a three-name allow-listed dispatcher with redacted, replayable tool records.
+- a local-only Gradio demo with fixture attestation, safe fallback states, and
+  redacted evidence and execution details.
 
 Planned:
 
 - deterministic safety verification;
-- a minimal local UI; and
 - benchmark, evaluation, and Docker smoke workflows.
 
 ## Safety scope
@@ -142,6 +143,19 @@ uv run --group dev python -m compileall -q src tests scripts
 uv run --group dev python scripts/generate_fixtures.py
 uv run --group agent python scripts/capture_baseline.py
 ```
+
+### Local offline demo
+
+Launch the UI without credentials, network model access, or a paid call:
+
+```bash
+uv run --group agent --group ui python app.py
+```
+
+Open `http://127.0.0.1:7860`, upload one of the exact PNG files from
+`data/fixtures/images/`, keep the displayed synthetic-demo question, confirm
+that the file contains no patient data, and run the check. Any unregistered
+image fails closed. Use `--port <1024-65535>` to select another local port.
 
 The baseline command writes a deterministic, fingerprinted, no-tool fake-model
 artifact under `artifacts/baselines/`. It uses the same synthetic image and

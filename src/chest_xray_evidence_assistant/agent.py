@@ -240,6 +240,10 @@ def _with_runtime_trace(
             kind="tool",
             status=record.status,
             name=record.name,
+            duration_ms=max(
+                0,
+                record.budget_after.elapsed_ms - record.budget_before.elapsed_ms,
+            ),
             input_sha256=record.arguments_sha256,
             output_sha256=record.result_sha256,
             failure_code=record.failure_code,

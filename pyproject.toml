@@ -23,6 +23,9 @@ agent = [
 live = [
     "pydantic-ai-slim[openai]>=2.36,<3",
 ]
+ui = [
+    "gradio>=6.26,<7",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/chest_xray_evidence_assistant"]
