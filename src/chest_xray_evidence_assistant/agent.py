@@ -135,13 +135,18 @@ async def run_evidence_request(
 
     _validate_image_bytes(request, image_bytes)
     agent = create_agent(model)
+    cost_limit = (
+        None
+        if getattr(model, "system", None) == "test"
+        else Decimal(str(request.limits.max_estimated_cost_usd))
+    )
     result = await agent.run(
         _prompt_parts(request, image_bytes),
         usage_limits=UsageLimits(
             request_limit=request.limits.max_model_requests,
             tool_calls_limit=0,
             output_tokens_limit=request.limits.max_output_tokens,
-            cost_limit=Decimal(str(request.limits.max_estimated_cost_usd)),
+            cost_limit=cost_limit,
         ),
     )
     response = VisualResponse.model_validate(result.output.model_dump(mode="json"))

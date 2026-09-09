@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+import warnings
 from pathlib import Path
 
 import pytest
 from pydantic_ai import models
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 from pydantic_ai.models.test import TestModel
+from pydantic_ai.usage import CostNotFoundWarning
 
 from chest_xray_evidence_assistant.agent import create_agent, run_evidence_request
 from chest_xray_evidence_assistant.fixtures import load_fixture_manifest
@@ -49,7 +51,9 @@ def test_fake_model_completes_one_bounded_multimodal_request() -> None:
         model_name="fixture-model-v1",
     )
 
-    response = asyncio.run(run_evidence_request(request, image_bytes, model=model))
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", CostNotFoundWarning)
+        response = asyncio.run(run_evidence_request(request, image_bytes, model=model))
 
     assert response.status == "answered"
     assert response.visual_evidence[0].locator.image_id == request.image.image_id

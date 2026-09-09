@@ -70,8 +70,10 @@ The request flow is:
 7. Store only redacted trace metadata for evaluation and reproducibility.
 
 The current code implements the contract, deterministic fixture, provider-
-neutral model-port, and fake-model agent layers. Hosted providers, tools,
-retrieval, verification, UI, and deployment remain opt-in incremental slices.
+neutral model-port, bounded fake-model agent, opt-in OpenAI/Ollama model
+factory, and fingerprinted one-shot baseline. A cost-bearing live call remains
+explicitly opt-in. Tools, retrieval, verification, UI, and deployment remain
+incremental slices.
 
 ## Contracts
 
@@ -95,14 +97,16 @@ Implemented:
 
 - strict Pydantic contracts;
 - deterministic synthetic image fixtures;
-- fixture manifest and file verification; and
+- fixture manifest and file verification;
 - deterministic fake response tests;
-- a provider-neutral model adapter; and
-- a bounded Pydantic AI path exercised with a deterministic fake model.
+- a provider-neutral model adapter;
+- a bounded Pydantic AI path exercised with a deterministic fake model;
+- an environment-only, opt-in OpenAI/Ollama provider factory and smoke path;
+  and
+- a repeatable, fingerprinted one-shot/no-tool baseline capture.
 
 Planned:
 
-- one opt-in multimodal agent;
 - the three bounded tools;
 - provenance-preserving retrieval;
 - deterministic safety verification;
@@ -123,11 +127,39 @@ is added.
 uv run --group dev pytest tests/unit tests/safety
 uv run --group dev --group agent pytest tests/integration
 uv run --group dev --group agent pytest -q
+uv run --group dev --group agent --group live pytest -q
 uv run --group dev ruff format --check .
 uv run --group dev ruff check .
 uv run --group dev python -m compileall -q src tests scripts
 uv run --group dev python scripts/generate_fixtures.py
+uv run --group agent python scripts/capture_baseline.py
 ```
+
+The baseline command writes a deterministic, fingerprinted, no-tool fake-model
+artifact under `artifacts/baselines/`. It uses the same synthetic image and
+question as the live smoke and is suitable for repeatability checks, not model
+quality claims. Add `--live` only with the explicit live-provider environment
+below; that path can make a cost-bearing request.
+
+### Opt-in live-provider smoke
+
+Live model access is never enabled by the default test or application path.
+Install the isolated provider dependencies and set configuration in the
+environment before running the smoke command:
+
+```bash
+uv sync --group live
+export CXR_LIVE_SMOKE=1
+export CXR_PROVIDER=openai
+export CXR_MODEL=gpt-4.1-mini
+export OPENAI_API_KEY="replace-with-provider-key"
+uv run --group live python scripts/live_smoke.py
+```
+
+For a local Ollama-compatible endpoint, use `CXR_PROVIDER=ollama` and set
+`OLLAMA_BASE_URL` instead of `OPENAI_API_KEY`. The command sends the committed
+synthetic full-frame fixture to the configured model and may incur provider
+cost. Without `CXR_LIVE_SMOKE=1`, it exits before constructing a live model.
 
 The detailed staged implementation plan is maintained in the project planning
 capsule outside this repository.

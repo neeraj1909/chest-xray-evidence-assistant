@@ -20,6 +20,9 @@ dev = [
 agent = [
     "pydantic-ai-slim>=2.36,<3",
 ]
+live = [
+    "pydantic-ai-slim[openai]>=2.36,<3",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/chest_xray_evidence_assistant"]
