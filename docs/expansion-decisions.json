@@ -1,0 +1,219 @@
+{
+  "schema_version": 1,
+  "decision_date": "2026-09-10",
+  "project_scope": "local_non_diagnostic_learning_artifact",
+  "source_evidence": {
+    "matrix": {
+      "path": "tests/fixtures/evals/matrix-summary.json",
+      "sha256": "80c20ae5ed7d641033354e1823bfd86942d0699b0c341374a858454e13fc2fdd",
+      "report_kind": "offline_scripted_ablation_matrix",
+      "runner_mode": "offline_scripted",
+      "case_count": 120
+    },
+    "held_out": {
+      "splits": [
+        "validation",
+        "test"
+      ],
+      "case_count": 48,
+      "case_set_sha256": "2fee50d77fcda85f7830c837662aa4165b3a47f2ae28da35a711db5ba8b63b13"
+    },
+    "comparison_inputs_identical": true,
+    "latency_accounting": "deterministic-estimate-v1",
+    "token_accounting": "alphanumeric-span-estimate-v1",
+    "claim_boundary": "Scripted offline wiring evidence; not live-model, clinical-quality, real-latency, or real-cost evidence."
+  },
+  "current_architecture": {
+    "candidate": "full_agent",
+    "baselines": [
+      "one_shot_vlm",
+      "vlm_tools"
+    ],
+    "decision": "keep",
+    "delta_definition": "candidate_minus_baseline",
+    "metrics": {
+      "one_shot_vlm": {
+        "task_success_rate": 0.625,
+        "tool_required_task_success_rate": 0.0,
+        "safety_pass_rate": 1.0,
+        "unsupported_claim_rate": 0.0,
+        "high_severity_safety_failures": 0,
+        "latency_p50_ms": 14.0,
+        "latency_p95_ms": 16.0,
+        "model_requests_total": 48,
+        "tool_calls_total": 0,
+        "output_tokens_total": 1719,
+        "estimated_cost_usd_total": 0.0,
+        "budget_violation_rate": 0.0
+      },
+      "vlm_tools": {
+        "task_success_rate": 0.8125,
+        "tool_required_task_success_rate": 0.5,
+        "safety_pass_rate": 1.0,
+        "unsupported_claim_rate": 0.0,
+        "high_severity_safety_failures": 0,
+        "latency_p50_ms": 20.0,
+        "latency_p95_ms": 25.0,
+        "model_requests_total": 48,
+        "tool_calls_total": 9,
+        "output_tokens_total": 2052,
+        "estimated_cost_usd_total": 0.0,
+        "budget_violation_rate": 0.0
+      },
+      "full_agent": {
+        "task_success_rate": 1.0,
+        "tool_required_task_success_rate": 1.0,
+        "safety_pass_rate": 1.0,
+        "unsupported_claim_rate": 0.0,
+        "high_severity_safety_failures": 0,
+        "latency_p50_ms": 31.0,
+        "latency_p95_ms": 35.0,
+        "model_requests_total": 48,
+        "tool_calls_total": 18,
+        "output_tokens_total": 3264,
+        "estimated_cost_usd_total": 0.0,
+        "budget_violation_rate": 0.0
+      }
+    },
+    "deltas": {
+      "one_shot_vlm": {
+        "task_success_rate": 0.375,
+        "tool_required_task_success_rate": 1.0,
+        "safety_pass_rate": 0.0,
+        "unsupported_claim_rate": 0.0,
+        "high_severity_safety_failures": 0,
+        "latency_p95_ms": 19.0,
+        "tool_calls_total": 18,
+        "output_tokens_total": 1545,
+        "estimated_cost_usd_total": 0.0
+      },
+      "vlm_tools": {
+        "task_success_rate": 0.1875,
+        "tool_required_task_success_rate": 0.5,
+        "safety_pass_rate": 0.0,
+        "unsupported_claim_rate": 0.0,
+        "high_severity_safety_failures": 0,
+        "latency_p95_ms": 10.0,
+        "tool_calls_total": 9,
+        "output_tokens_total": 1212,
+        "estimated_cost_usd_total": 0.0
+      }
+    },
+    "gate_results": {
+      "tool_required_success_improved": true,
+      "overall_task_success_improved": true,
+      "safety_pass_rate_regressed": false,
+      "unsupported_claim_rate_increased": false,
+      "high_severity_safety_failures_increased": false,
+      "within_existing_request_budgets": true
+    },
+    "rationale": [
+      "The bounded full agent improves both held-out task success and tool-required success over both named baselines.",
+      "The scripted safety rates do not regress and no high-severity safety failure or budget violation is observed.",
+      "The extra tool work and estimated token and latency overhead are visible and remain inside the existing per-request limits."
+    ]
+  },
+  "expansions": [
+    {
+      "capability": "visual_grounding_segmentation",
+      "decision": "defer",
+      "implementation_authorized": false,
+      "missing_evidence": [
+        "project-approved dataset with segmentation masks",
+        "verified dataset and model licenses",
+        "selected model artifact and measured local resource budget",
+        "held-out task-specific IoU and measurement-error report",
+        "abstention and non-diagnostic safety report"
+      ],
+      "approval_gates": [
+        "Approve one synthetic, de-identified, or license-cleared mask dataset and one redistributable model artifact.",
+        "Pre-register task-specific IoU, measurement-error, latency, memory, and safety thresholds.",
+        "Fit the capability inside the three-tool limit by replacement, or separately approve a revised tool budget.",
+        "Prove every output remains a visual locator and still passes deterministic response and provenance verification."
+      ],
+      "safety_constraints": [
+        "No diagnosis, triage, treatment, or clinical-report authority.",
+        "A mask cannot bypass abstention, confidence, provenance, or response-schema checks.",
+        "No real patient image or PHI may enter the default fixture or evaluation path."
+      ],
+      "hard_constraints": {
+        "tool_budget_change_authorized": false,
+        "may_bypass_deterministic_verification": false,
+        "clinical_output_authorized": false
+      }
+    },
+    {
+      "capability": "independent_critic_agent",
+      "decision": "defer",
+      "implementation_authorized": false,
+      "observed_trigger": false,
+      "missing_evidence": [
+        "pre-registered residual failures not caught by deterministic verification",
+        "actor-only versus actor-plus-critic ablation on identical cases",
+        "measured live latency, token, and cost overhead",
+        "error-recovery and correlated-failure report"
+      ],
+      "approval_gates": [
+        "Identify a reproducible residual-failure set where deterministic verification is insufficient.",
+        "Show a positive task or safety improvement on that set without a regression on the frozen benchmark.",
+        "Measure added latency, token use, cost, and new failure modes before changing the topology.",
+        "Keep the critic read-only with no tool, permission, or external-action authority."
+      ],
+      "safety_constraints": [
+        "The critic cannot grant permissions or override deterministic guards.",
+        "The critic cannot call tools or create external side effects.",
+        "Actor and critic outputs remain inside the same non-diagnostic response contract."
+      ],
+      "hard_constraints": {
+        "tool_authority": "none",
+        "permission_authority": "none",
+        "external_action_authority": "none",
+        "may_override_deterministic_guards": false
+      }
+    },
+    {
+      "capability": "external_benchmark_transfer",
+      "decision": "defer",
+      "implementation_authorized": false,
+      "candidate_benchmarks": [
+        "ChestAgentBench",
+        "AgentClinic",
+        "MedAgentBench"
+      ],
+      "missing_evidence": [
+        "approved access to an exact benchmark version",
+        "verified data, code, and result-reporting licenses",
+        "documented patient-data and network boundary",
+        "task and action-schema compatibility mapping",
+        "separately labeled reproducible transfer report"
+      ],
+      "approval_gates": [
+        "Select and approve one exact benchmark version before downloading or executing it.",
+        "Review license, data provenance, PHI, network, and side-effect boundaries.",
+        "Map only compatible tasks and actions; do not reinterpret clinical actions as local evidence tasks.",
+        "Run in a separate sandbox and label external results separately from CXR-AgentBench-v0."
+      ],
+      "safety_constraints": [
+        "No EHR, PACS, patient-system, or clinical-action integration is authorized.",
+        "External scores cannot be merged with or substituted for the owned benchmark metrics.",
+        "Incompatible tasks must be excluded and reported, not silently adapted."
+      ],
+      "hard_constraints": {
+        "result_namespace": "separate",
+        "clinical_action_authorized": false,
+        "ehr_access_authorized": false
+      }
+    }
+  ],
+  "overall_decision": {
+    "architecture": "bounded_single_agent",
+    "approved_expansions": [],
+    "deferred_expansions": [
+      "visual_grounding_segmentation",
+      "independent_critic_agent",
+      "external_benchmark_transfer",
+      "ehr_integration"
+    ],
+    "next_scope": "stabilize_local_mvp_and_optionally_validate_one_live_provider"
+  }
+}

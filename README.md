@@ -133,7 +133,9 @@ Implemented:
 - one-attempt safe degradation for unavailable model, image-tool, and retrieval
   dependencies, with stable redacted failure codes.
 
-Planned: evidence-backed expansion decisions for optional later capabilities.
+The evidence-backed expansion decision keeps the bounded single-agent design
+and defers segmentation, a critic agent, external benchmark transfer, and EHR
+integration. See [`docs/expansion-decisions.md`](docs/expansion-decisions.md).
 
 ## Safety scope
 
